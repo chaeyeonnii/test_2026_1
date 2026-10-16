@@ -156,6 +156,34 @@ pre.code { margin: 0; background: var(--code); border-radius: 8px; padding: 12px
 .empty b { color: var(--text); display: block; margin-bottom: 4px; }
 .empty p { margin: 0; font-size: 14px; }
 
+/* 상세 요약 (요약정리 HTML에서 가져온 장별 내용) */
+.nquick { background: var(--primary-soft); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+.nquick summary { cursor: pointer; color: var(--primary); font-weight: 700; font-size: 14px; }
+.nquick ul { margin-top: 8px; }
+.ndoc { font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; display: flex; flex-direction: column; gap: 8px; }
+.ndoc h4 { font-size: 15.5px; margin: 10px 0 0; padding-left: 8px; border-left: 4px solid var(--primary); }
+.ndoc h5 { font-size: 15px; margin: 6px 0 0; color: var(--primary); }
+.ndoc p { margin: 0; }
+.ndoc ul, .ndoc ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.ndoc pre { margin: 0; background: var(--code); border-radius: 8px; padding: 10px 12px; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; overflow-x: auto; white-space: pre; }
+.ndoc code { white-space: pre-wrap; }
+.ndoc pre code { background: none; padding: 0; white-space: pre; }
+/* flex 자식은 기본 min-width:auto라 넓은 표가 화면 밖으로 밀어내므로 0으로 풀어 준다 */
+.stack > *, .ndoc, .ndoc > *, .n-star > *, .n-note > *, .n-box > * { min-width: 0; max-width: 100%; }
+.n-tbl { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 8px; }
+.n-tbl table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.n-tbl th, .n-tbl td { border-bottom: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; overflow-wrap: normal; word-break: keep-all; min-width: 3.2em; }
+.n-tbl th { background: var(--code); font-weight: 700; white-space: nowrap; }
+.n-tbl tr:last-child td { border-bottom: 0; }
+.n-star { border: 1.5px solid color-mix(in srgb, #f5b100 70%, transparent); background: color-mix(in srgb, #f5b100 9%, var(--card)); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.n-note { border-left: 4px solid var(--ok); background: var(--ok-soft); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.n-box { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.n-sub { font-weight: 700; }
+.n-badge { align-self: flex-start; font-size: 11.5px; font-weight: 700; color: #b37400; background: color-mix(in srgb, #f5b100 22%, transparent); border-radius: 999px; padding: 1px 8px; }
+.n-hl { background: linear-gradient(transparent 55%, color-mix(in srgb, #f5d000 45%, transparent) 55%); font-weight: 500; }
+.n-red { color: var(--ng); font-weight: 700; }
+.n-formula { text-align: center; font-weight: 700; font-size: 16px; background: var(--code); border-radius: 8px; padding: 8px; }
+
 /* 노트 */
 .note h3 { font-size: 16px; margin-bottom: 8px; }
 .note ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
@@ -604,11 +632,15 @@ window.BANK = [];
     const keys = Object.keys(b.notes);
     let h = '<div class="bar"><button class="icon-btn" id="back" type="button" aria-label="뒤로">' + ICON.back + '</button><h1>' + esc(b.name) + '</h1></div>' + tabs("notes");
     h += '<div class="chips jump">' + keys.map(function (c) { return '<button class="chip" type="button" data-jump="' + c + '">' + c + '장</button>'; }).join("") + '</div><div class="stack">';
+    const detail = b.notesHtml || {};
     keys.forEach(function (c) {
       const n = b.qs.filter(function (q) { return String(q.c) === c; }).length;
-      h += '<section class="card note" id="note-' + c + '"><h3>' + esc(c + "장 " + b.chapters[c]) + '</h3><ul>' +
-        b.notes[c].map(function (t) { return "<li>" + fmtNote(t) + "</li>"; }).join("") + '</ul>' +
-        (n ? '<button class="link" type="button" data-solve="' + c + '">이 챕터 문제 풀기 (' + n + '문제) →</button>' : "") + '</section>';
+      const bullets = '<ul>' + b.notes[c].map(function (t) { return "<li>" + fmtNote(t) + "</li>"; }).join("") + '</ul>';
+      h += '<section class="card note" id="note-' + c + '"><h3>' + esc(c + "장 " + b.chapters[c]) + '</h3>';
+      // 상세 요약(요약정리 HTML에서 가져온 것)이 있으면 그것을 보여 주고, 짧은 핵심 정리는 접어 둔다
+      if (detail[c]) h += '<details class="nquick"><summary>핵심만 빠르게 보기</summary>' + bullets + '</details><div class="ndoc">' + detail[c] + '</div>';
+      else h += bullets;
+      h += (n ? '<button class="link" type="button" data-solve="' + c + '">이 챕터 문제 풀기 (' + n + '문제) →</button>' : "") + '</section>';
     });
     h += '</div>';
     app.innerHTML = h;

@@ -9,8 +9,8 @@ def main():
     src = (ROOT / "src" / "app.html").read_text(encoding="utf-8")
     blocks = []
     for name in ORDER:
-        # 과목 문제은행 다음에 요약정리 원문 문항(.sum.js)이 있으면 이어서 넣는다
-        for path in (ROOT / "data" / f"{name}.js", ROOT / "data" / f"{name}.sum.js"):
+        # 과목 문제은행 다음에 요약정리 원문 문항(.sum.js)과 장별 상세 요약(.notes.js)이 있으면 이어서 넣는다
+        for path in (ROOT / "data" / f"{name}.js", ROOT / "data" / f"{name}.sum.js", ROOT / "data" / f"{name}.notes.js"):
             if not path.exists():
                 continue
             js = path.read_text(encoding="utf-8")
