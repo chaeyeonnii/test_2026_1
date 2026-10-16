@@ -141,6 +141,21 @@ pre.code { margin: 0; background: var(--code); border-radius: 8px; padding: 12px
 .note { scroll-margin-top: calc(64px + env(safe-area-inset-top, 0px)); }
 .note .link { margin-top: 10px; }
 
+/* 오답노트 */
+.tag.miss { background: var(--ng-soft); color: var(--ng); font-weight: 700; }
+.wnote .qtext { margin-bottom: 10px; }
+.wopts { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--sub); }
+.wopts li { overflow-wrap: anywhere; }
+.wopts li.right { color: var(--ok); font-weight: 700; }
+.wans { margin-top: 12px; }
+.wans summary { cursor: pointer; color: var(--primary); font-size: 14px; font-weight: 500; }
+.wans .feedback { margin-top: 8px; }
+.wbtns { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; }
+.wbtns .done { color: var(--sub); }
+.empty { text-align: center; color: var(--sub); }
+.empty b { color: var(--text); display: block; margin-bottom: 4px; }
+.empty p { margin: 0; font-size: 14px; }
+
 /* 노트 */
 .note h3 { font-size: 16px; margin-bottom: 8px; }
 .note ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
@@ -1691,7 +1706,7 @@ BANK.find(b => b.id === "py").qs.push(
   function go(v) { view = v; render(); window.scrollTo(0, 0); }
   function on(id, fn) { const el = document.getElementById(id); if (el) el.onclick = fn; }
   function render() {
-    ({ home: renderHome, subject: renderSubject, quiz: renderQuiz, result: renderResult, notes: renderNotes })[view.name]();
+    ({ home: renderHome, subject: renderSubject, quiz: renderQuiz, result: renderResult, notes: renderNotes, wrong: renderWrong })[view.name]();
   }
   function meter(st) {
     const okW = st.total ? st.ok / st.total * 100 : 0, ngW = st.total ? st.ng / st.total * 100 : 0;
@@ -1712,13 +1727,11 @@ BANK.find(b => b.id === "py").qs.push(
     });
     h += '</div><p class="foot">기록은 자동 저장됩니다' + (syncOn ? " · 폰과 PC 동기화 중" : "") + '</p>';
     app.innerHTML = h;
-    setDock(allWrong ? '<button class="btn light" id="wrongAll" type="button">전 과목 틀린 문제 ' + allWrong + '개 다시 풀기</button>' : null);
+    const noteCount = wrongList(null).length;
+    setDock('<button class="btn light" id="wrongAll" type="button">오답노트 ' + noteCount + '문제</button>');
     app.querySelectorAll("[data-s]").forEach(function (el) { el.onclick = function () { go({ name: "subject", id: el.dataset.s }); }; });
     app.querySelectorAll("[data-sum]").forEach(function (el) { el.onclick = function () { go({ name: "notes", id: el.dataset.sum }); }; });
-    on("wrongAll", function () {
-      const pool = []; IDS.forEach(function (id) { SUBJ[id].qs.forEach(function (q) { const r = state.rec[q.id]; if (r && r.l === 0) pool.push(q); }); });
-      start(function () { return draw(pool, 0); }, "전체 오답", { name: "home" });
-    });
+    on("wrongAll", function () { go({ name: "wrong", id: null }); });
   }
 
   // 과목 — 챕터 선택 + 출제 설정
@@ -1816,6 +1829,7 @@ BANK.find(b => b.id === "py").qs.push(
     const r = state.rec[q.id] || { c: 0, w: 0 };
     if (ok) r.c++; else r.w++;
     r.l = ok ? 1 : 0; r.t = Date.now();
+    if (!ok) delete r.x; // 다시 틀리면 오답노트에 다시 올린다
     state.rec[q.id] = r;
     session.res[session.i] = ok;
     session.answered = true;
@@ -1903,15 +1917,81 @@ BANK.find(b => b.id === "py").qs.push(
     on("again", function () { start(s.maker, s.title, s.from); });
   }
 
-  // 과목 화면 상단 탭: 문제 / 요약
+  // 과목 화면 상단 탭: 문제 / 요약 / 오답노트
   function tabs(active) {
     return '<div class="tabs" role="tablist">' +
-      '<button type="button" role="tab" data-tab="quiz" aria-selected="' + (active === "quiz") + '">문제</button>' +
-      '<button type="button" role="tab" data-tab="notes" aria-selected="' + (active === "notes") + '">요약</button></div>';
+      [["subject", "문제"], ["notes", "요약"], ["wrong", "오답노트"]].map(function (t) {
+        return '<button type="button" role="tab" data-tab="' + t[0] + '" aria-selected="' + (active === t[0]) + '">' + t[1] + '</button>';
+      }).join("") + '</div>';
   }
   function bindTabs(id) {
     app.querySelectorAll("[data-tab]").forEach(function (el) {
-      el.onclick = function () { if (el.getAttribute("aria-selected") !== "true") go({ name: el.dataset.tab === "quiz" ? "subject" : "notes", id: id }); };
+      el.onclick = function () { if (el.getAttribute("aria-selected") !== "true") go({ name: el.dataset.tab, id: id }); };
+    });
+  }
+
+  // 오답노트에 오르는 문제: 마지막으로 틀렸고, ‘외웠어요’로 빼지 않은 것
+  function wrongList(id) {
+    const out = [];
+    (id ? [id] : IDS).forEach(function (sid) {
+      SUBJ[sid].qs.forEach(function (q) { const r = state.rec[q.id]; if (r && r.l === 0 && !r.x) out.push(q); });
+    });
+    return out;
+  }
+
+  // 오답노트 — 과목 탭에서 열면 그 과목만, 홈에서 열면 전 과목(과목 필터 가능)
+  function renderWrong() {
+    const fixed = view.id || null; // 과목 화면 탭에서 들어오면 그 과목으로 고정
+    const filter = view.filter || null;
+    const sid = fixed || filter;
+    const sort = view.sort || "recent";
+    let list = wrongList(sid);
+    list.sort(function (a, b) {
+      const ra = state.rec[a.id], rb = state.rec[b.id];
+      if (sort === "many") return rb.w - ra.w || rb.t - ra.t;
+      if (sort === "chapter") return IDS.indexOf(a.subj) - IDS.indexOf(b.subj) || Number(a.c) - Number(b.c);
+      return rb.t - ra.t;
+    });
+    let h = '<div class="bar"><button class="icon-btn" id="back" type="button" aria-label="뒤로">' + ICON.back + '</button><h1>' +
+      (fixed ? esc(SUBJ[fixed].name) : "오답노트") + '</h1></div>';
+    if (fixed) h += tabs("wrong");
+    else {
+      h += '<div class="chips jump"><button class="chip" type="button" data-f="" aria-pressed="' + !filter + '">전체<small>' + wrongList(null).length + '</small></button>' +
+        IDS.map(function (id) { return '<button class="chip" type="button" data-f="' + id + '" aria-pressed="' + (filter === id) + '">' + esc(SUBJ[id].name) + '<small>' + wrongList(id).length + '</small></button>'; }).join("") + '</div>';
+    }
+    h += '<div class="chips jump"><span class="label" style="align-self:center">정렬</span>' +
+      [["recent", "최근 틀린 순"], ["many", "많이 틀린 순"], ["chapter", "챕터 순"]].map(function (x) { return '<button class="chip" type="button" data-sort="' + x[0] + '" aria-pressed="' + (sort === x[0]) + '">' + x[1] + '</button>'; }).join("") + '</div>';
+    h += '<div class="stack">';
+    if (!list.length) {
+      h += '<div class="card empty"><b>오답노트가 비어 있어요</b><p>문제를 풀다 틀리면 여기에 자동으로 모입니다.</p></div>';
+    }
+    list.forEach(function (q) {
+      const r = state.rec[q.id], b = SUBJ[q.subj];
+      const d = new Date(r.t);
+      h += '<article class="card wnote"><div class="qhead"><span class="tag type">' + TYPE[q.t] + '</span><span class="tag">' + esc(b.name + " · " + q.c + "장") + '</span>' +
+        '<span class="tag miss">' + r.w + '번 틀림</span>' + (q.s ? '<span class="tag star">★ 빈출</span>' : "") + '<span class="tag">' + (d.getMonth() + 1) + '/' + d.getDate() + '</span></div>' +
+        '<div class="qtext">' + fmt(q.q) + '</div>' + (q.k ? '<pre class="code">' + esc(q.k) + '</pre>' : "") +
+        (q.t === "mc" ? '<ol class="wopts">' + q.o.map(function (o, k) { return '<li class="' + (k === q.a ? "right" : "") + '">' + NUMS[k] + ' ' + fmt(o) + '</li>'; }).join("") + '</ol>' : "") +
+        '<details class="wans"><summary>정답과 해설 보기</summary><div class="feedback"><span class="ans">' + fmt(answerText(q)) + '</span>' + (q.e ? '<span class="ex">' + fmt(q.e) + '</span>' : "") + '</div></details>' +
+        '<div class="wbtns"><button class="link" type="button" data-one="' + q.id + '">이 문제 다시 풀기</button><button class="link done" type="button" data-done="' + q.id + '">외웠어요 (노트에서 빼기)</button></div></article>';
+    });
+    h += '</div>';
+    app.innerHTML = h;
+    setDock(list.length ? '<button class="btn" id="retryAll" type="button">오답 ' + list.length + '문제 전부 다시 풀기</button>' : null);
+
+    const here = { name: "wrong", id: view.id, filter: filter, sort: sort };
+    on("back", function () { go(fixed ? { name: "subject", id: fixed } : { name: "home" }); });
+    if (fixed) bindTabs(fixed);
+    app.querySelectorAll("[data-f]").forEach(function (el) { el.onclick = function () { go(Object.assign({}, here, { filter: el.dataset.f || null })); }; });
+    app.querySelectorAll("[data-sort]").forEach(function (el) { el.onclick = function () { view.sort = el.dataset.sort; render(); }; });
+    on("retryAll", function () {
+      start(function () { return shuffle(wrongList(sid)); }, (sid ? SUBJ[sid].name + " " : "") + "오답 다시 풀기", here);
+    });
+    app.querySelectorAll("[data-one]").forEach(function (el) {
+      el.onclick = function () { const q = list.find(function (x) { return x.id === el.dataset.one; }); start(function () { return [q]; }, "오답 다시 풀기", here); };
+    });
+    app.querySelectorAll("[data-done]").forEach(function (el) {
+      el.onclick = function () { state.rec[el.dataset.done].x = true; touch(); toast("오답노트에서 뺐어요"); render(); };
     });
   }
 
