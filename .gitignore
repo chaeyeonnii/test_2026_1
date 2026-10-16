@@ -1,0 +1,12 @@
+# 강의자료 원본(PDF 등)은 저작권 문제로 올리지 않는다
+자료/
+
+# 파이썬·노드 부산물
+__pycache__/
+*.pyc
+node_modules/
+*.log
+
+# 로컬 설정
+.vercel/
+.env
