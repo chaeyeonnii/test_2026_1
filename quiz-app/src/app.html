@@ -119,9 +119,19 @@ pre.code { margin: 0; background: var(--code); border-radius: 8px; padding: 12px
 .feedback .ex { font-size: 14px; color: var(--sub); white-space: pre-line; overflow-wrap: anywhere; }
 .myans { display: block; width: 100%; min-height: 96px; margin-top: 14px; border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--card); font-size: 15px; line-height: 1.5; resize: vertical; }
 .myans:focus { border-color: var(--primary); outline: none; }
+.blanks { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.blank { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; }
+.blank .lb { min-width: 28px; font-weight: 700; color: var(--primary); text-align: center; }
+.blank input { width: 100%; min-width: 0; border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--card); font-size: 15px; }
+.blank input:focus { border-color: var(--primary); outline: none; }
 .feedback .mine { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .feedback .mine b { color: var(--sub); font-weight: 600; margin-right: 6px; }
-.feedback .same { font-size: 13px; color: var(--ok); font-weight: 600; }
+.feedback .parts { display: flex; flex-wrap: wrap; gap: 6px; }
+.feedback .pt { font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--card); }
+.feedback .pt.ok { color: var(--ok); }
+.feedback .pt.ng { color: var(--ng); }
+.feedback .keys { font-size: 13px; color: var(--sub); overflow-wrap: anywhere; }
+.feedback .keys b { color: var(--text); }
 .hint { font-size: 13px; color: var(--sub); margin-top: 12px; text-align: center; }
 
 /* 결과 */
@@ -225,7 +235,7 @@ window.BANK = [];
   "use strict";
 
   const TYPE = { ox: "OX", mc: "객관식", sa: "단답형", bl: "빈칸" };
-  const SRC_LABEL = { "퀴즈": "수업 퀴즈", "요약정리": "요약정리 예상문제", "강의": "강의 확인문제", "추가": "추가 문제" };
+  const SRC_LABEL = { "퀴즈": "수업 퀴즈", "요약정리": "요약정리 예상문제", "강의": "강의 확인문제", "기출": "중간고사 기출", "추가": "추가 문제" };
   const ORDER = ["ca", "ai", "bd", "ds", "py"];
   const DEFAULT_EXAM = "2026-10-26";
   const LS_KEY = "midterm-quiz-v2";
@@ -451,13 +461,13 @@ window.BANK = [];
   function start(maker, title, from) {
     const qs = maker();
     if (!qs.length) { toast("풀 문제가 없어요"); return; }
-    session = { maker: maker, qs: qs, i: 0, res: [], typed: [], picked: null, answered: false, revealed: false, title: title, from: from };
+    session = { maker: maker, qs: qs, i: 0, res: [], typed: [], graded: null, picked: null, answered: false, revealed: false, title: title, from: from };
     go({ name: "quiz" });
   }
   function refresh() {
     const qs = session.maker();
     if (!qs.length) { toast("새로 낼 문제가 없어요"); return; }
-    Object.assign(session, { qs: qs, i: 0, res: [], typed: [], picked: null, answered: false, revealed: false });
+    Object.assign(session, { qs: qs, i: 0, res: [], typed: [], graded: null, picked: null, answered: false, revealed: false });
     toast("새 문제로 바꿨어요");
     render(); window.scrollTo(0, 0);
   }
@@ -471,8 +481,84 @@ window.BANK = [];
     session.answered = true;
     touch();
   }
-  // 직접 쓴 답과 정답 비교용: 공백·대소문자·문장부호 차이는 무시한다
-  function norm(t) { return String(t).toLowerCase().replace(/[\s.,·;:'"`()\[\]{}]/g, ""); }
+  // 자동 채점의 결과를 반대로 바꾼다(동의어로 썼는데 오답 처리된 경우 등)
+  function regrade(q) {
+    const r = state.rec[q.id], was = session.res[session.i];
+    if (r) { if (was) r.c = Math.max(0, r.c - 1); else r.w = Math.max(0, r.w - 1); }
+    record(q, !was);
+    session.graded.ok = !was; session.graded.flipped = !session.graded.flipped;
+  }
+
+  // ── 단답·빈칸 자동 채점 ──
+  // 칸 표시: ①② … 또는 (가)(나) … (A)(B) …
+  const MARK = /[①-⑳]|\((?:[가-하]|[A-Z])\)/g;
+  // 비교용: 칸 표시·공백·대소문자·문장부호·화살표 차이와 맨 앞 0x는 무시한다
+  function norm(t) { return String(t).toLowerCase().replace(MARK, "").replace(/[\s,·;:'"`()\[\]{}→—]/g, "").replace(/^0x/, "").replace(/\./g, ""); }
+  // 정답을 칸별로 나눈다. 칸 표시로 시작하지 않으면 한 칸짜리
+  function splitParts(a) {
+    const text = String(a).trim(), ms = [];
+    let m; MARK.lastIndex = 0;
+    while ((m = MARK.exec(text))) ms.push(m);
+    if (!ms.length || ms[0].index !== 0) return [{ label: "", text: text }];
+    return ms.map(function (m, k) { return { label: m[0], text: text.slice(m.index + m[0].length, k + 1 < ms.length ? ms[k + 1].index : text.length).trim() }; });
+  }
+  // 한 칸의 인정 답: "알고리즘(Algorithm)"이면 전체·앞·괄호 안 모두 인정
+  function variants(t) {
+    const v = [norm(t)], m = t.match(/^(.+?)\s*\((.+)\)$/);
+    if (m) v.push(norm(m[1]), norm(m[2]));
+    return v.filter(function (x) { return x; });
+  }
+  const STOP = ["원인", "조치", "이다", "있다", "한다", "된다", "때문", "때문에", "그리고", "또는", "하는", "있는", "것이", "것을"];
+  // 반환: { auto: true, ok, parts?, keys?, empty? } — 모든 답을 자동 채점한다
+  const KEY_PASS = 0.6; // 서술형은 정답 핵심어를 60% 이상 쓰면 정답
+  // 숫자 뒤 단위만 빠진 경우는 인정: "10"과 "10회", "7.5"와 "7.5ns"
+  function unitOnly(u, v) { return /^-?[0-9]+$/.test(u) && v.indexOf(u) === 0 && v.length - u.length <= 3 && !/[0-9]/.test(v.slice(u.length)); }
+  function grade(q, typed) {
+    const ps = splitParts(q.a);
+    // 칸별로 따로 입력한 경우: 칸마다 인정 답과 같거나 인정 답을 포함하면 맞음
+    if (Array.isArray(typed)) {
+      if (!typed.some(function (x) { return norm(x || ""); })) return { auto: true, ok: false, empty: true };
+      const res = ps.map(function (p, k) {
+        const u = norm(typed[k] || "");
+        return Object.assign({ ok: !!u && variants(p.text).some(function (v) { return u === v || u.indexOf(v) >= 0 || unitOnly(u, v); }) }, p);
+      });
+      return { auto: true, ok: res.every(function (p) { return p.ok; }), parts: res.length > 1 ? res : null };
+    }
+    const u = norm(typed);
+    if (!u) return { auto: true, ok: false, empty: true };
+    if (u === norm(q.a)) return { auto: true, ok: true, parts: ps.length > 1 ? ps.map(function (p) { return Object.assign({ ok: true }, p); }) : null };
+    if (ps.length > 1) {
+      // 여러 칸: 각 칸의 답이 내 답 안에 순서대로 들어 있는지 본다
+      let pos = 0;
+      const res = ps.map(function (p) {
+        let hit = -1, len = 0;
+        variants(p.text).forEach(function (v) { const i = u.indexOf(v, pos); if (i >= 0 && (hit < 0 || i < hit)) { hit = i; len = v.length; } });
+        if (hit >= 0) pos = hit + len;
+        return Object.assign({ ok: hit >= 0 }, p);
+      });
+      return { auto: true, ok: res.every(function (p) { return p.ok; }), parts: res };
+    }
+    const t = ps[0].text;
+    // 짧은 한 칸짜리 답은 그대로 비교
+    if (norm(t).length <= 20 && !/[—\n]/.test(t)) return { auto: true, ok: variants(t).indexOf(u) >= 0, parts: null };
+    // 서술형: 정답의 핵심어가 내 답에 얼마나 들어 있는지만 알려 준다(끝 글자 조사는 봐준다)
+    const seen = {}, keys = [];
+    t.split(/[\s,./·:;()\[\]{}"'`=<>→—+*×|\-]+/).forEach(function (w) {
+      const k = norm(w);
+      if (k.length < 2 || STOP.indexOf(k) >= 0 || seen[k]) return;
+      seen[k] = 1;
+      keys.push({ w: w, ok: u.indexOf(k) >= 0 || (k.length >= 3 && /[가-힣]$/.test(k) && u.indexOf(k.slice(0, -1)) >= 0) });
+    });
+    if (!keys.length) return { auto: true, ok: false };
+    const hit = keys.filter(function (k) { return k.ok; }).length;
+    return { auto: true, ok: hit / keys.length >= KEY_PASS, keys: keys };
+  }
+  // 화면에 보여 줄 내 답: 칸별 입력이면 "① a  ② b" 형태로 합친다
+  function typedText(q, t) {
+    if (!Array.isArray(t)) return (t || "").trim();
+    const ps = splitParts(q.a);
+    return t.some(function (x) { return (x || "").trim(); }) ? ps.map(function (p, k) { return p.label + " " + ((t[k] || "").trim() || "—"); }).join("  ") : "";
+  }
   function answerText(q) { return q.t === "mc" ? NUMS[q.a] + " " + q.o[q.a] : (q.t === "ox" ? q.a : q.a); }
 
   function renderQuiz() {
@@ -497,38 +583,74 @@ window.BANK = [];
       }).join("") + '</div>';
     }
     const self = q.t === "sa" || q.t === "bl";
-    if (s.answered || (self && s.revealed)) {
+    if (s.answered) {
       const ok = s.res[s.i];
       const cls = s.answered ? (ok ? " ok" : " ng") : "";
-      const v = s.answered ? (ok ? "정답입니다" : "오답입니다") : "정답";
-      const mine = self ? (s.typed[s.i] || "").trim() : "";
+      const g = self ? s.graded : null;
+      const v = (s.answered ? (ok ? "정답입니다" : "오답입니다") : "정답") + (g && g.auto ? (g.flipped ? " · 직접 바꿈" : " · 자동 채점") : "");
+      const mine = self ? typedText(q, s.typed[s.i]) : "";
       h += '<div class="feedback' + cls + '">' +
         (mine ? '<span class="mine"><b>내 답</b>' + esc(mine) + '</span>' : "") +
-        '<span class="v">' + v + '</span>' +
-        (mine && !s.answered && norm(mine) === norm(q.a) ? '<span class="same">정답과 똑같이 썼어요</span>' : "") +
-        '<span class="ans">' + fmt(answerText(q)) + '</span>' + (q.e ? '<span class="ex">' + fmt(q.e) + '</span>' : "") + '</div>';
+        '<span class="v">' + v + '</span>';
+      if (g && g.parts) h += '<span class="parts">' + g.parts.map(function (p) { return '<span class="pt ' + (p.ok ? "ok" : "ng") + '">' + esc(p.label) + ' ' + (p.ok ? "맞음" : "틀림") + '</span>'; }).join("") + '</span>';
+      if (g && g.empty) h += '<span class="keys">답을 쓰지 않아 오답으로 처리했어요</span>';
+      if (g && g.keys) {
+        const hit = g.keys.filter(function (k) { return k.ok; }).length, miss = g.keys.filter(function (k) { return !k.ok; });
+        h += '<span class="keys">핵심어 <b>' + g.keys.length + '개 중 ' + hit + '개</b> 포함 (' + Math.round(KEY_PASS * 100) + '% 이상이면 정답)' + (miss.length ? ' · 빠진 말: ' + miss.map(function (k) { return esc(k.w); }).join(", ") : "") + '</span>';
+      }
+      h += '<span class="ans">' + fmt(answerText(q)) + '</span>' + (q.e ? '<span class="ex">' + fmt(q.e) + '</span>' : "") + '</div>';
     } else if (self) {
-      h += '<textarea class="myans" id="myans" placeholder="답을 직접 써 보세요" aria-label="내 답 입력">' + esc(s.typed[s.i] || "") + '</textarea>';
-      h += '<p class="hint">답을 쓰고 ‘정답 확인’을 누른 뒤, 맞았는지 직접 고르세요. 비워 두고 확인해도 돼요.</p>';
+      const ps = splitParts(q.a);
+      if (ps[0].label) {
+        // 칸 표시(①, (가) …)가 있는 답은 칸 개수만큼 입력칸을 만든다
+        const t = Array.isArray(s.typed[s.i]) ? s.typed[s.i] : [];
+        h += '<div class="blanks">' + ps.map(function (p, k) {
+          return '<label class="blank"><span class="lb">' + esc(p.label) + '</span><input type="text" data-blank="' + k + '" value="' + esc(t[k] || "") + '" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="' + (k === ps.length - 1 ? "done" : "next") + '" aria-label="' + esc(p.label) + ' 칸 답"></label>';
+        }).join("") + '</div>';
+      } else {
+        h += '<textarea class="myans" id="myans" placeholder="답을 직접 써 보세요" aria-label="내 답 입력">' + esc(s.typed[s.i] || "") + '</textarea>';
+      }
+      h += '<p class="hint">답을 쓰고 ‘정답 확인’을 누르면 자동 채점돼요. 서술형은 정답의 핵심어를 얼마나 썼는지로 채점해요.</p>';
     }
     h += '</article>';
     app.innerHTML = h;
 
     const last = s.i === s.qs.length - 1;
     if (s.answered) {
-      setDock('<button class="btn" id="next" type="button">' + (last ? "결과 보기" : "다음 문제") + '</button>');
+      const flip = self && s.graded && s.graded.auto;
+      setDock((flip ? '<button class="btn light" id="flip" type="button">' + (s.res[s.i] ? "사실 틀렸어요" : "사실 맞았어요") + '</button>' : "") +
+        '<button class="btn" id="next" type="button">' + (last ? "결과 보기" : "다음 문제") + '</button>');
       on("next", next);
-    } else if (self && s.revealed) {
-      setDock('<button class="btn ng" id="mark0" type="button">틀렸어요</button><button class="btn ok" id="mark1" type="button">맞았어요</button>');
-      on("mark1", function () { record(q, true); next(); });
-      on("mark0", function () { record(q, false); renderQuiz(); });
+      on("flip", function () { regrade(q); renderQuiz(); });
     } else if (self) {
       setDock('<button class="btn" id="reveal" type="button">정답 확인</button>');
-      on("reveal", function () { s.revealed = true; renderQuiz(); });
+      // 정답 확인 = 자동 채점 후 바로 기록(빈 답은 오답)
+      const check = function () {
+        s.graded = grade(q, s.typed[s.i] || "");
+        s.revealed = true;
+        record(q, s.graded.ok);
+        renderQuiz();
+      };
+      on("reveal", check);
       const ta = document.getElementById("myans");
-      ta.oninput = function () { s.typed[s.i] = ta.value; };
-      // Ctrl/⌘ + Enter로 바로 정답 확인
-      ta.onkeydown = function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); s.revealed = true; renderQuiz(); } };
+      if (ta) {
+        ta.oninput = function () { s.typed[s.i] = ta.value; };
+        // Ctrl/⌘ + Enter로 바로 정답 확인
+        ta.onkeydown = function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); check(); } };
+      }
+      const ins = app.querySelectorAll("[data-blank]");
+      ins.forEach(function (el, k) {
+        el.oninput = function () {
+          if (!Array.isArray(s.typed[s.i])) s.typed[s.i] = [];
+          s.typed[s.i][k] = el.value;
+        };
+        // Enter: 다음 칸으로, 마지막 칸이면 정답 확인
+        el.onkeydown = function (e) {
+          if (e.key !== "Enter" || e.isComposing) return;
+          e.preventDefault();
+          if (k < ins.length - 1 && !e.ctrlKey && !e.metaKey) ins[k + 1].focus(); else check();
+        };
+      });
     } else {
       setDock('<button class="btn light" id="skip" type="button">건너뛰기</button>');
       on("skip", next);
@@ -541,7 +663,7 @@ window.BANK = [];
   function next() {
     const s = session;
     if (s.i >= s.qs.length - 1) { go({ name: "result" }); return; }
-    Object.assign(s, { i: s.i + 1, picked: null, answered: false, revealed: false });
+    Object.assign(s, { i: s.i + 1, graded: null, picked: null, answered: false, revealed: false });
     renderQuiz(); window.scrollTo(0, 0);
   }
 
@@ -554,7 +676,7 @@ window.BANK = [];
     h += '<div class="card rlist">';
     s.qs.forEach(function (q, k) {
       if (s.res[k] === undefined) return;
-      h += '<div class="ritem' + (s.res[k] ? "" : " ng") + '"><span class="mk">' + (s.res[k] ? "O" : "X") + '</span><p>' + fmt(q.q.split("\n")[0]) + (s.typed[k] && s.typed[k].trim() ? '<small>내 답: ' + esc(s.typed[k].trim()) + '</small>' : "") + '<small>정답: ' + fmt(answerText(q)) + '</small></p></div>';
+      h += '<div class="ritem' + (s.res[k] ? "" : " ng") + '"><span class="mk">' + (s.res[k] ? "O" : "X") + '</span><p>' + fmt(q.q.split("\n")[0]) + (typedText(q, s.typed[k]) ? '<small>내 답: ' + esc(typedText(q, s.typed[k])) + '</small>' : "") + '<small>정답: ' + fmt(answerText(q)) + '</small></p></div>';
     });
     h += '</div></div>';
     app.innerHTML = h;
