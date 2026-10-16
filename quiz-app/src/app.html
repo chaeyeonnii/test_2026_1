@@ -36,9 +36,9 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.55; -webkit-tap-highlight-color: transparent; }
-button, input { font: inherit; color: inherit; }
+button, input, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
-button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .wrap { max-width: 600px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 110px; }
 h1, h2, h3 { margin: 0; text-wrap: balance; }
 code { font-family: var(--mono); font-size: .88em; background: var(--code); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
@@ -117,6 +117,11 @@ pre.code { margin: 0; background: var(--code); border-radius: 8px; padding: 12px
 .feedback.ng .v { color: var(--ng); }
 .feedback .ans { font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
 .feedback .ex { font-size: 14px; color: var(--sub); white-space: pre-line; overflow-wrap: anywhere; }
+.myans { display: block; width: 100%; min-height: 96px; margin-top: 14px; border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--card); font-size: 15px; line-height: 1.5; resize: vertical; }
+.myans:focus { border-color: var(--primary); outline: none; }
+.feedback .mine { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.feedback .mine b { color: var(--sub); font-weight: 600; margin-right: 6px; }
+.feedback .same { font-size: 13px; color: var(--ok); font-weight: 600; }
 .hint { font-size: 13px; color: var(--sub); margin-top: 12px; text-align: center; }
 
 /* 결과 */
@@ -446,13 +451,13 @@ window.BANK = [];
   function start(maker, title, from) {
     const qs = maker();
     if (!qs.length) { toast("풀 문제가 없어요"); return; }
-    session = { maker: maker, qs: qs, i: 0, res: [], picked: null, answered: false, revealed: false, title: title, from: from };
+    session = { maker: maker, qs: qs, i: 0, res: [], typed: [], picked: null, answered: false, revealed: false, title: title, from: from };
     go({ name: "quiz" });
   }
   function refresh() {
     const qs = session.maker();
     if (!qs.length) { toast("새로 낼 문제가 없어요"); return; }
-    Object.assign(session, { qs: qs, i: 0, res: [], picked: null, answered: false, revealed: false });
+    Object.assign(session, { qs: qs, i: 0, res: [], typed: [], picked: null, answered: false, revealed: false });
     toast("새 문제로 바꿨어요");
     render(); window.scrollTo(0, 0);
   }
@@ -466,6 +471,8 @@ window.BANK = [];
     session.answered = true;
     touch();
   }
+  // 직접 쓴 답과 정답 비교용: 공백·대소문자·문장부호 차이는 무시한다
+  function norm(t) { return String(t).toLowerCase().replace(/[\s.,·;:'"`()\[\]{}]/g, ""); }
   function answerText(q) { return q.t === "mc" ? NUMS[q.a] + " " + q.o[q.a] : (q.t === "ox" ? q.a : q.a); }
 
   function renderQuiz() {
@@ -494,9 +501,15 @@ window.BANK = [];
       const ok = s.res[s.i];
       const cls = s.answered ? (ok ? " ok" : " ng") : "";
       const v = s.answered ? (ok ? "정답입니다" : "오답입니다") : "정답";
-      h += '<div class="feedback' + cls + '"><span class="v">' + v + '</span><span class="ans">' + fmt(answerText(q)) + '</span>' + (q.e ? '<span class="ex">' + fmt(q.e) + '</span>' : "") + '</div>';
+      const mine = self ? (s.typed[s.i] || "").trim() : "";
+      h += '<div class="feedback' + cls + '">' +
+        (mine ? '<span class="mine"><b>내 답</b>' + esc(mine) + '</span>' : "") +
+        '<span class="v">' + v + '</span>' +
+        (mine && !s.answered && norm(mine) === norm(q.a) ? '<span class="same">정답과 똑같이 썼어요</span>' : "") +
+        '<span class="ans">' + fmt(answerText(q)) + '</span>' + (q.e ? '<span class="ex">' + fmt(q.e) + '</span>' : "") + '</div>';
     } else if (self) {
-      h += '<p class="hint">답을 떠올린 뒤 ‘정답 확인’을 누르고, 맞았는지 직접 고르세요.</p>';
+      h += '<textarea class="myans" id="myans" placeholder="답을 직접 써 보세요" aria-label="내 답 입력">' + esc(s.typed[s.i] || "") + '</textarea>';
+      h += '<p class="hint">답을 쓰고 ‘정답 확인’을 누른 뒤, 맞았는지 직접 고르세요. 비워 두고 확인해도 돼요.</p>';
     }
     h += '</article>';
     app.innerHTML = h;
@@ -512,6 +525,10 @@ window.BANK = [];
     } else if (self) {
       setDock('<button class="btn" id="reveal" type="button">정답 확인</button>');
       on("reveal", function () { s.revealed = true; renderQuiz(); });
+      const ta = document.getElementById("myans");
+      ta.oninput = function () { s.typed[s.i] = ta.value; };
+      // Ctrl/⌘ + Enter로 바로 정답 확인
+      ta.onkeydown = function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); s.revealed = true; renderQuiz(); } };
     } else {
       setDock('<button class="btn light" id="skip" type="button">건너뛰기</button>');
       on("skip", next);
@@ -537,7 +554,7 @@ window.BANK = [];
     h += '<div class="card rlist">';
     s.qs.forEach(function (q, k) {
       if (s.res[k] === undefined) return;
-      h += '<div class="ritem' + (s.res[k] ? "" : " ng") + '"><span class="mk">' + (s.res[k] ? "O" : "X") + '</span><p>' + fmt(q.q.split("\n")[0]) + '<small>정답: ' + fmt(answerText(q)) + '</small></p></div>';
+      h += '<div class="ritem' + (s.res[k] ? "" : " ng") + '"><span class="mk">' + (s.res[k] ? "O" : "X") + '</span><p>' + fmt(q.q.split("\n")[0]) + (s.typed[k] && s.typed[k].trim() ? '<small>내 답: ' + esc(s.typed[k].trim()) + '</small>' : "") + '<small>정답: ' + fmt(answerText(q)) + '</small></p></div>';
     });
     h += '</div></div>';
     app.innerHTML = h;
