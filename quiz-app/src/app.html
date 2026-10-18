@@ -503,10 +503,17 @@ window.BANK = [];
     return ms.map(function (m, k) { return { label: m[0], text: text.slice(m.index + m[0].length, k + 1 < ms.length ? ms[k + 1].index : text.length).trim() }; });
   }
   // 한 칸의 인정 답: "알고리즘(Algorithm)"이면 전체·앞·괄호 안 모두 인정
+  // 단, "fit_predict(X)"처럼 한쪽이 한 글자면 나누지 않는다(X만 써도 정답이 되는 것을 막음)
   function variants(t) {
     const v = [norm(t)], m = t.match(/^(.+?)\s*\((.+)\)$/);
-    if (m) v.push(norm(m[1]), norm(m[2]));
+    if (m && norm(m[1]).length >= 2 && norm(m[2]).length >= 2) v.push(norm(m[1]), norm(m[2]));
     return v.filter(function (x) { return x; });
+  }
+  // 문제의 al(다른 표현 목록) 중 하나와 같으면 정답
+  function altHit(q, typed) {
+    if (!q.al) return false;
+    const u = norm(Array.isArray(typed) ? typed.join("") : typed || "");
+    return !!u && q.al.some(function (a) { return norm(a) === u; });
   }
   const STOP = ["원인", "조치", "이다", "있다", "한다", "된다", "때문", "때문에", "그리고", "또는", "하는", "있는", "것이", "것을"];
   // 반환: { auto: true, ok, parts?, keys?, empty? } — 모든 답을 자동 채점한다
@@ -515,6 +522,7 @@ window.BANK = [];
   function unitOnly(u, v) { return /^-?[0-9]+$/.test(u) && v.indexOf(u) === 0 && v.length - u.length <= 3 && !/[0-9]/.test(v.slice(u.length)); }
   function grade(q, typed) {
     const ps = splitParts(q.a);
+    if (altHit(q, typed)) return { auto: true, ok: true, parts: null };
     // 칸별로 따로 입력한 경우: 칸마다 인정 답과 같거나 인정 답을 포함하면 맞음
     if (Array.isArray(typed)) {
       if (!typed.some(function (x) { return norm(x || ""); })) return { auto: true, ok: false, empty: true };
