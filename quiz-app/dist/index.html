@@ -2268,7 +2268,19 @@ BANK.find(b => b.id === "py").notesHtml = {
       return true;
     });
   }
-  function draw(pool, n) { const a = shuffle(pool.slice()); return n === 0 ? a : a.slice(0, n); }
+  // 챕터를 먼저 무작위로 고르고 그 안에서 문제를 뽑는다: 문제가 많은 챕터만 몰려 나오지 않게 한다
+  function pickBalanced(pool, n) {
+    const groups = {};
+    shuffle(pool.slice()).forEach(function (q) { (groups[q.subj + "-" + q.c] = groups[q.subj + "-" + q.c] || []).push(q); });
+    const keys = Object.keys(groups), out = [];
+    while (keys.length && out.length < n) {
+      const k = Math.floor(Math.random() * keys.length);
+      out.push(groups[keys[k]].pop());
+      if (!groups[keys[k]].length) keys.splice(k, 1);
+    }
+    return out;
+  }
+  function draw(pool, n) { return n === 0 ? shuffle(pool.slice()) : pickBalanced(pool, n); }
 
   // ── 텍스트: 이스케이프 후 `코드`만 code 태그로 ──
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
@@ -2362,7 +2374,7 @@ BANK.find(b => b.id === "py").notesHtml = {
         const one = Object.assign({}, cfg, { ch: [el.dataset.only] });
         const p = poolFor(id, one);
         if (!p.length) { toast("이 챕터에 조건에 맞는 문제가 없어요"); return; }
-        start(function () { return draw(poolFor(id, one), one.n); }, b.name + " " + el.dataset.only + "장", from);
+        start(function () { return draw(poolFor(id, one), one.n); }, b.name + " " + el.dataset.only + "장", from, function () { return poolFor(id, one); });
       };
     });
     app.querySelectorAll("[data-type]").forEach(function (el) {
@@ -2378,7 +2390,7 @@ BANK.find(b => b.id === "py").notesHtml = {
     document.getElementById("examDate").onchange = function (e) { if (e.target.value) { state.exam[id] = e.target.value; touch(); } };
     on("go", function () {
       const title = cfg.ch.length === 1 ? b.name + " " + cfg.ch[0] + "장" : b.name + " " + (cfg.ch.length === keys.length ? "전체" : cfg.ch.length + "개 챕터");
-      start(function () { return draw(poolFor(id, cfg), cfg.n); }, title, from);
+      start(function () { return draw(poolFor(id, cfg), cfg.n); }, title, from, function () { return poolFor(id, cfg); });
     });
     const rb = document.getElementById("reset");
     rb.onclick = function () {
@@ -2388,19 +2400,26 @@ BANK.find(b => b.id === "py").notesHtml = {
     };
   }
 
-  // 퀴즈 시작: maker()를 다시 부르면 같은 조건의 새 문제 세트가 나온다(새로고침)
-  function start(maker, title, from) {
+  // 퀴즈 시작: maker()를 다시 부르면 같은 조건의 새 문제 세트가 나온다("새 문제로 다시").
+  // poolFn은 같은 조건의 전체 문제 목록이며, "새 문제" 버튼이 풀던 문제 하나만 바꿀 때 쓴다
+  function start(maker, title, from, poolFn) {
     const qs = maker();
     if (!qs.length) { toast("풀 문제가 없어요"); return; }
-    session = { maker: maker, qs: qs, i: 0, res: [], typed: [], graded: null, picked: null, answered: false, revealed: false, title: title, from: from };
+    session = { maker: maker, pool: poolFn, qs: qs, i: 0, res: [], typed: [], graded: null, picked: null, answered: false, revealed: false, title: title, from: from };
     go({ name: "quiz" });
   }
+  // 지금 풀고 있는 문제 하나만 같은 조건의 다른 문제로 바꾼다
   function refresh() {
-    const qs = session.maker();
-    if (!qs.length) { toast("새로 낼 문제가 없어요"); return; }
-    Object.assign(session, { qs: qs, i: 0, res: [], typed: [], graded: null, picked: null, answered: false, revealed: false });
-    toast("새 문제로 바꿨어요");
-    render(); window.scrollTo(0, 0);
+    const s = session;
+    const used = {};
+    s.qs.forEach(function (q) { used[q.id] = true; });
+    const cand = s.pool ? s.pool().filter(function (q) { return !used[q.id]; }) : [];
+    if (!cand.length) { toast("바꿀 새 문제가 없어요"); return; }
+    s.qs[s.i] = pickBalanced(cand, 1)[0];
+    s.res[s.i] = undefined; s.typed[s.i] = undefined;
+    Object.assign(s, { graded: null, picked: null, answered: false, revealed: false });
+    toast("이 문제를 바꿨어요");
+    renderQuiz(); window.scrollTo(0, 0);
   }
   function record(q, ok) {
     const r = state.rec[q.id] || { c: 0, w: 0 };
@@ -2504,7 +2523,7 @@ BANK.find(b => b.id === "py").notesHtml = {
     const s = session, q = s.qs[s.i], b = SUBJ[q.subj];
     let h = '<div class="bar"><button class="icon-btn" id="quit" type="button" aria-label="그만하기">' + ICON.close + '</button>' +
       '<h1>' + esc(s.title) + ' <span class="sub">' + (s.i + 1) + ' / ' + s.qs.length + '</span></h1>' +
-      '<button class="icon-btn" id="refresh" type="button" aria-label="새 문제로 새로고침">' + ICON.refresh + '새 문제</button></div>';
+      '<button class="icon-btn" id="refresh" type="button" aria-label="이 문제만 새로고침">' + ICON.refresh + '새 문제</button></div>';
     h += '<div class="progress"><i style="width:' + ((s.i + (s.answered ? 1 : 0)) / s.qs.length * 100) + '%"></i></div>';
     h += '<article class="card"><div class="qhead"><span class="tag type">' + TYPE[q.t] + '</span><span class="tag">' + esc(b.name + " · " + q.c + "장") + '</span>' +
       '<span class="tag">' + esc(SRC_LABEL[q.src] || q.src) + '</span>' + (q.org ? '<span class="tag">' + esc(q.org) + '</span>' : "") + (q.s ? '<span class="tag star">★ 빈출</span>' : "") + '</div>';
@@ -2731,7 +2750,7 @@ BANK.find(b => b.id === "py").notesHtml = {
     app.querySelectorAll("[data-solve]").forEach(function (el) {
       el.onclick = function () {
         const one = Object.assign({}, cfg, { ch: [el.dataset.solve], scope: "all", types: ["ox", "mc", "sa", "bl"] });
-        start(function () { return draw(poolFor(b.id, one), one.n); }, b.name + " " + el.dataset.solve + "장", { name: "notes", id: b.id });
+        start(function () { return draw(poolFor(b.id, one), one.n); }, b.name + " " + el.dataset.solve + "장", { name: "notes", id: b.id }, function () { return poolFor(b.id, one); });
       };
     });
   }
