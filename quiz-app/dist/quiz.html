@@ -2188,7 +2188,8 @@ BANK.find(b => b.id === "py").notesHtml = {
   // ── 상태 ──
   // rec[qid] = { c: 맞힌 횟수, w: 틀린 횟수, l: 마지막 결과(1/0), t: 마지막 시각 }
   // cfg[과목] = { ch: [선택 챕터], types: [유형], scope: "all|new|wrong|star", n: 문제 수 }
-  let state = { rec: {}, exam: {}, cfg: {}, updatedAt: 0 };
+  // shown[qid] = 1: 화면에 한 번이라도 나온 문제(풀지 않고 넘겨도 기록). 다시 나오면 객관식 보기 순서를 섞는다
+  let state = { rec: {}, shown: {}, exam: {}, cfg: {}, updatedAt: 0 };
   try { const raw = localStorage.getItem(LS_KEY); if (raw) state = Object.assign(state, JSON.parse(raw)); } catch (e) {}
 
   let docRef = null, syncOn = false, pushTimer = null, pushing = false, again = false;
@@ -2198,7 +2199,7 @@ BANK.find(b => b.id === "py").notesHtml = {
     if (!docRef) return;
     if (pushing) { again = true; return; }
     pushing = true;
-    try { await docRef.set({ rec: state.rec, exam: state.exam, cfg: state.cfg, updatedAt: state.updatedAt }); } catch (e) {}
+    try { await docRef.set({ rec: state.rec, shown: state.shown, exam: state.exam, cfg: state.cfg, updatedAt: state.updatedAt }); } catch (e) {}
     pushing = false;
     if (again) { again = false; push(); }
   }
@@ -2209,6 +2210,9 @@ BANK.find(b => b.id === "py").notesHtml = {
     Object.keys(r.rec || {}).forEach(function (id) {
       const a = state.rec[id], b = r.rec[id];
       if (!a || (b.t || 0) > (a.t || 0)) { state.rec[id] = b; changed = true; }
+    });
+    Object.keys(r.shown || {}).forEach(function (id) {
+      if (!state.shown[id]) { state.shown[id] = 1; changed = true; }
     });
     if ((r.updatedAt || 0) > (state.updatedAt || 0)) {
       state.exam = Object.assign({}, state.exam, r.exam || {});
@@ -2518,7 +2522,21 @@ BANK.find(b => b.id === "py").notesHtml = {
   }
   function answerText(q) { return q.t === "mc" ? NUMS[q.a] + " " + q.o[q.a] : (q.t === "ox" ? q.a : q.a); }
 
+  // 이미 화면에 나왔던(또는 푼) 객관식은 보기 순서를 바꿔 낸다. 정답 번호도 함께 옮기고, 같은 세션에서는 다시 그려도 그대로 둔다
+  function prepare(s) {
+    const q = s.qs[s.i];
+    s.prep = s.prep || {};
+    if (s.prep[q.id]) return;
+    s.prep[q.id] = true;
+    if (q.t === "mc" && q.o.length > 1 && (state.shown[q.id] || state.rec[q.id])) {
+      let idx;
+      do { idx = shuffle(q.o.map(function (_, k) { return k; })); } while (idx.every(function (v, k) { return v === k; }));
+      s.qs[s.i] = Object.assign({}, q, { o: idx.map(function (k) { return q.o[k]; }), a: idx.indexOf(q.a) });
+    }
+    if (!state.shown[q.id]) { state.shown[q.id] = 1; touch(); }
+  }
   function renderQuiz() {
+    prepare(session);
     const s = session, q = s.qs[s.i], b = SUBJ[q.subj];
     let h = '<div class="bar"><button class="icon-btn" id="quit" type="button" aria-label="그만하기">' + ICON.close + '</button>' +
       '<h1>' + esc(s.title) + ' <span class="sub">' + (s.i + 1) + ' / ' + s.qs.length + '</span></h1>' +
