@@ -2,10 +2,13 @@
 (window.CARDS = window.CARDS || {}).bd = [
   // ── 0장 강의 소개 ──
   {c:0,q:"데이터 파이프라인 5단계를 순서대로 말하고, 단계마다 이 수업에서 쓰는 기술을 짝지어 보세요.",a:"수집 → 저장 → 가공 → 시각화 → 확인",e:"수집 네이버 금융 API · 저장 Turso DB · 가공 파이썬/pandas · 시각화 matplotlib · 확인 텔레그램/Streamlit. 회사 데이터 일도 같은 다섯 칸을 지난다."},
-  {c:0,q:"Push 방식과 Pull 방식의 차이는? 이 수업의 예시도 함께.",a:"Push = 결과를 나에게 보내 줌(텔레그램 알림), Pull = 내가 열어서 확인(Streamlit 웹 대시보드)",e:"데이터 파이프라인의 마지막 ‘확인’ 단계를 구현하는 두 가지 방법이다."},
+  {c:0,q:"확인 단계에서 결과를 앱이 먼저 보내 주는 방식으로, 텔레그램 알림이 해당하는 것은?",a:"Push",e:"내가 열어서 확인하는 방식은 Pull(Streamlit 웹 대시보드)."},
+  {c:0,q:"확인 단계에서 내가 직접 열어서 결과를 보는 방식으로, Streamlit 웹 대시보드가 해당하는 것은?",a:"Pull",e:"보내 주는 방식은 Push(텔레그램)."},
 
   // ── 1장 환경 세팅·Git/GitHub ──
-  {c:1,q:"GitHub(원격)와 내 컴퓨터(로컬)는 어떤 관계이고, Commit과 Sync Changes는 각각 무엇을 하나요?",a:"둘은 별개의 사본이다. Commit = 내 컴퓨터에만 도장을 찍는 것, Sync Changes = 그 기록을 GitHub으로 올리는 것",e:"Commit만 하고 Sync를 안 하면 GitHub에는 아무것도 올라가지 않는다."},
+  {c:1,q:"변경 내용을 내 컴퓨터에만 기록하는 Git 동작은?",a:"Commit",e:"GitHub에는 아직 올라가지 않는다."},
+  {c:1,q:"Commit한 기록을 GitHub으로 올리는 VS Code 버튼은?",a:"Sync Changes",e:"Commit만 하고 Sync를 안 하면 GitHub에는 아무것도 없다."},
+  {c:1,q:"GitHub(원격)와 내 컴퓨터(로컬)의 관계는?",a:"별개의 사본",e:"서로 자동으로 맞춰지지 않는다."},
   {c:1,q:"이 파일의 첫 줄에 적힌 내용은 무엇을 위한 것일까요?",k:`# 비밀정보 — 절대 커밋하지 말 것
 .env`,a:".gitignore — 여기 적힌 파일(.env)은 Git이 추적하지 않아 GitHub에 올라가지 않는다",e:"토큰이 한 번 커밋되면 이력에 남아 되돌릴 수 없다. 그래서 .gitignore를 가장 먼저 만든다."},
   {c:1,q:"아래 두 줄은 각각 무슨 일을 하나요?",k:`git config --global user.name
@@ -14,7 +17,8 @@ git config --global user.name "hong-gildong"`,a:"첫 줄은 현재 설정된 이
   {c:1,q:"watchlist.csv의 첫 줄 code,name은 어떤 역할인가요?",k:`code,name
 005930,삼성전자
 000660,SK하이닉스`,a:"열 이름(헤더). 이후 줄이 데이터 행이다",e:"코드가 쓰는 열은 code 하나뿐이다. pandas가 첫 줄을 열 이름으로 읽는다."},
-  {c:1,q:"GitHub에 올릴 때 저장소 이름 입력 후 Enter와 마우스 클릭의 차이, 그리고 Initialize Repository를 누르면 안 되는 이유는?",a:"Enter = private(기본), 마우스로 고르면 public 선택 가능. Initialize Repository는 누르지 않고 아래 Publish to GitHub를 사용한다",e:"실수했다면 VS Code를 닫고 .git을 삭제한 뒤 다시 연다. 메인 폴더 이름은 영문·숫자로 만든다."},
+  {c:1,q:"GitHub에 올릴 때 저장소 이름 입력 후 Enter를 치면 만들어지는 공개 범위는?",a:"private",e:"public은 마우스로 직접 고른다."},
+  {c:1,q:"GitHub에 올릴 때 누르지 말아야 하는 VS Code 버튼은?",a:"Initialize Repository",e:"대신 아래 Publish to GitHub를 쓴다. 실수했다면 VS Code 닫기 → .git 삭제 → 다시 열기. 폴더 이름은 영문·숫자로."},
 
   // ── 2장 텔레그램 봇 ──
   {c:2,q:"이 두 줄은 무슨 일을 하고, 키가 없으면 어떻게 되나요?",k:`load_dotenv()
@@ -32,7 +36,8 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")`,a:".env 파일의 값
    'date': 1757030400, 'text': '안녕'}}]}`,a:"123456789 — result → message → chat → id",e:"from.id(987654321)와 헷갈리지 말 것. 'result': [] 로 비어 있으면 오류가 아니라 봇에게 먼저 메시지를 안 보낸 것이다."},
   {c:2,q:"아래 두 줄 중 값이 제대로 읽히지 않는 것은 무엇이고 왜 그런가요?",k:`TELEGRAM_BOT_TOKEN=123456:ABCdef
 TELEGRAM_BOT_TOKEN=“123456:ABCdef”`,a:"두 번째 줄 — 둥근(스마트) 따옴표가 값에 그대로 포함돼 토큰이 틀어진다",e:"401 = 토큰 값이 틀림, 404 = .env를 못 읽음."},
-  {c:2,q:"토큰이 노출됐을 때 올바른 대처는? CHAT_ID도 바꿔야 하나요?",a:"@BotFather에서 /revoke로 토큰을 새로 발급해 교체. CHAT_ID는 그대로 둔다",e:"지우는 것으로는 이미 이력에 남은 토큰을 막을 수 없다. 바꿔야 한다."},
+  {c:2,q:"텔레그램 토큰이 노출됐을 때 새 토큰을 발급받는 BotFather 명령어는?",a:"/revoke",e:"지우는 것이 아니라 바꾼다."},
+  {c:2,q:"토큰을 재발급해도 바꿀 필요가 없는 .env 값은?",a:"TELEGRAM_CHAT_ID",e:"chat id는 토큰과 무관하다."},
 
   // ── 3장 API로 현재가 ──
   {c:3,q:"이 네 줄이 하는 일과 마지막 print가 긴 딕셔너리를 쏟아내는 이유는?",k:`import requests
@@ -91,12 +96,14 @@ prices = [71000, 70500, 71800, 72400, 71900]
 fig, ax = plt.subplots()
 ax.plot(prices)
 fig.savefig("my_first_chart.png")`,a:"가격 5개를 꺾은선으로 그린 my_first_chart.png 이미지 파일",e:"흐름: subplots → plot → annotate → savefig."},
-  {c:5,q:"fig와 ax는 각각 무엇인가요?",a:"fig = 도화지(그림 전체, 저장 담당), ax = 좌표축(실제로 그리는 곳)",e:"그래프는 ax에 그리고 저장은 fig.savefig."},
+  {c:5,q:"matplotlib에서 도화지에 해당하며 저장(savefig)을 담당하는 객체는?",a:"fig",e:"그리는 곳은 ax."},
+  {c:5,q:"matplotlib에서 실제로 그래프를 그리는 좌표축 객체는?",a:"ax",e:"흐름: subplots → plot → annotate → savefig."},
   {c:5,q:"ax.plot(prices)와 ax.plot(days, prices)의 차이는?",k:`ax.plot(prices)
 ax.plot(days, prices)`,a:"앞은 x축이 0,1,2…(순번) 자동, 뒤는 x축을 days 값으로 지정",e:"annotate의 xytext=(0, 8)은 점에서 위로 8포인트 띄운 위치에 글자를 놓는다는 뜻."},
   {c:5,q:"이 반복문이 그래프에 하는 일은?",k:`for i, p in enumerate(prices):
     ax.annotate(f"{p:,}", (i, p), textcoords="offset points", xytext=(0, 8), ha="center")`,a:"각 점 위에 천 단위 콤마가 붙은 가격 글자를 점에서 8포인트 위, 가운데 정렬로 표시한다",e:"enumerate는 (순번, 값)을 함께 돌려준다."},
-  {c:5,q:"봇·서버 프로그램에서 plt.show()를 쓰지 않는 이유와 한글 폰트 설정의 위치는?",a:"봇·서버에는 화면이 없어서 창을 띄울 수 없으므로 savefig로 파일 저장. 한글 폰트(윈도우 Malgun Gothic, 맥 AppleGothic)는 그리기 전에 설정",e:"폰트를 안 맞추면 한글이 네모로 깨진다."},
+  {c:5,q:"봇·서버처럼 화면이 없는 환경에서 plt.show() 대신 그래프를 파일로 남기는 메서드는?",a:"fig.savefig()",e:"창을 띄울 화면이 없다."},
+  {c:5,q:"한글이 네모로 깨지지 않으려면 폰트를 언제 설정해야 하는가?",a:"그래프를 그리기 전",e:"윈도우 Malgun Gothic, 맥 AppleGothic."},
 
   // ── 6장 관심종목 전부가 온다 ──
   {c:6,q:"함수 정의의 path: str = WATCHLIST_FILE는 무슨 뜻이고, 인자 없이 호출하면 어떻게 되나요?",k:`def read_watchlist(path: str = WATCHLIST_FILE) -> list:`,a:"path의 기본값이 WATCHLIST_FILE이라서 인자 없이 호출해도 오류가 없고 기본 파일을 읽는다",e:"실패하면(파일 없음·code 열 없음·읽기 오류) None을 반환한다."},
@@ -109,5 +116,5 @@ ax.plot(days, prices)`,a:"앞은 x축이 0,1,2…(순번) 자동, 뒤는 x축을
   {c:6,q:"종목별 메시지를 한 통으로 보내려면 어떻게 이어 붙이나요?",k:`message = ""
 for code in watchlist_codes:
     message += f"📈 {name} ({code})\\n"`,a:"+= 로 문자열을 계속 이어 붙인 뒤 반복이 끝나고 한 번만 전송한다",e:"6장의 진짜 학습은 리팩터링(코드를 함수로 묶기). 파일 나누기는 9장."},
-  {c:6,q:"한국 주식 정규장 시간과 종가가 정해지는 구간은?",a:"정규장 09:00~15:30, 종가는 15:20~15:30 동시호가에서 정해진다",e:"장 마감 후 closePrice는 종가, 장중에는 현재가."}
+  {c:6,q:"종가가 정해지는 동시호가 시간대는?",a:"15:20~15:30",e:"정규장은 09:00~15:30. 장 마감 후 closePrice는 종가, 장중에는 현재가."}
 ];
