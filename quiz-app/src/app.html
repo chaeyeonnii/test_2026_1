@@ -264,6 +264,16 @@ window.BANK = [];
     SUBJ[b.id] = b;
   });
   const IDS = ORDER.filter(function (id) { return SUBJ[id]; });
+  // 암기카드: 문제은행과 별개인 개념 카드(data/*.cards.js). q 앞면, k 코드, a 정답, e 보충 설명
+  const DECK = {};
+  IDS.forEach(function (id) {
+    DECK[id] = ((window.CARDS || {})[id] || []).map(function (c) {
+      return Object.assign({}, c, { subj: id, id: id + ".card." + c.c + "." + hash(c.q + (c.k || "")) });
+    });
+  });
+  function deckChapters(id) {
+    return Object.keys(SUBJ[id].chapters).filter(function (c) { return DECK[id].some(function (q) { return String(q.c) === c; }); });
+  }
 
   // ── 상태 ──
   // rec[qid] = { c: 맞힌 횟수, w: 틀린 횟수, l: 마지막 결과(1/0), t: 마지막 시각 }
@@ -403,7 +413,7 @@ window.BANK = [];
       h += '<div class="card subj"><div class="subj-top"><h2>' + esc(b.name) + '</h2><span class="dday">' + ddayText(id) + '</span></div>' +
         meter(st) + '<div class="meta"><span>' + st.seen + ' / ' + st.total + '문제 풀이</span><span>정답률 ' + acc + '</span><span>오답 ' + st.ng + '</span></div>' +
         '<div class="subj-btns"><button class="btn" type="button" data-s="' + id + '">문제 풀기</button><button class="btn light" type="button" data-sum="' + id + '">요약 보기</button></div>' +
-        '<div class="subj-btns"><button class="btn ok" type="button" data-srs="' + id + '">암기카드 · ' + srsLabel(id) + '</button></div></div>';
+        (DECK[id].length ? '<div class="subj-btns"><button class="btn ok" type="button" data-srs="' + id + '">암기카드 · ' + srsLabel(id) + '</button></div>' : "") + '</div>';
     });
     h += '</div><p class="foot">기록은 자동 저장됩니다' + (syncOn ? " · 폰과 PC 동기화 중" : "") + '</p>';
     app.innerHTML = h;
@@ -889,22 +899,19 @@ window.BANK = [];
   function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
   function srsCfg(id) {
     const b = SUBJ[id], c = state.sc[id] || {};
-    return { ch: Array.isArray(c.ch) ? c.ch.filter(function (x) { return b.chapters[x]; }) : chapterKeys(b), n: typeof c.n === "number" ? c.n : 30 };
+    return { ch: Array.isArray(c.ch) ? c.ch.filter(function (x) { return b.chapters[x]; }) : deckChapters(id), n: typeof c.n === "number" ? c.n : 30 };
   }
-  function srsCards(id, cfg) { return SUBJ[id].qs.filter(function (q) { return cfg.ch.indexOf(String(q.c)) >= 0; }); }
+  function srsCards(id, cfg) { return DECK[id].filter(function (q) { return cfg.ch.indexOf(String(q.c)) >= 0; }); }
   function newOrder(cards) {
     const idx = {};
     cards.forEach(function (q, k) { idx[q.id] = k; });
-    // 틀려 본 문제 먼저, 그다음 챕터 순서대로
-    return cards.filter(function (q) { return !state.srs[q.id]; }).sort(function (a, b) {
-      const wa = (state.rec[a.id] || {}).l === 0 ? 0 : 1, wb = (state.rec[b.id] || {}).l === 0 ? 0 : 1;
-      return wa - wb || a.c - b.c || idx[a.id] - idx[b.id];
-    });
+    // 챕터 순서대로, 같은 챕터 안에서는 만든 순서대로
+    return cards.filter(function (q) { return !state.srs[q.id]; }).sort(function (a, b) { return a.c - b.c || idx[a.id] - idx[b.id]; });
   }
   function srsInfo(id) {
     const cfg = srsCfg(id), cards = srsCards(id, cfg), now = Date.now(), today = startOfToday();
     let due = 0, learned = 0, next = Infinity, newToday = 0;
-    SUBJ[id].qs.forEach(function (q) { const r = state.srs[q.id]; if (r && r.f >= today) newToday++; });
+    DECK[id].forEach(function (q) { const r = state.srs[q.id]; if (r && r.f >= today) newToday++; });
     cards.forEach(function (q) {
       const r = state.srs[q.id];
       if (!r) return;
@@ -933,7 +940,7 @@ window.BANK = [];
   }
 
   function renderSrs() {
-    const id = view.id, b = SUBJ[id], info = srsInfo(id), cfg = info.cfg, keys = chapterKeys(b);
+    const id = view.id, b = SUBJ[id], info = srsInfo(id), cfg = info.cfg, keys = deckChapters(id);
     const total = info.cards.length;
     const solid = info.cards.filter(function (q) { const r = state.srs[q.id]; return r && r.s >= 4; }).length;
     let h = '<div class="bar"><button class="icon-btn" id="back" type="button" aria-label="뒤로">' + ICON.back + '</button><h1>' + esc(b.name) + ' 암기카드</h1><span class="dday">' + ddayText(id) + '</span></div><div class="stack">';
@@ -944,7 +951,7 @@ window.BANK = [];
     h += '<section class="card"><p class="srs-help">문제를 보고 답을 떠올린 뒤 <b>정답 보기</b>를 누르고, 얼마나 기억났는지 고르세요. 못 외운 카드는 금방, 잘 외운 카드는 점점 늦게 다시 나옵니다. 시험일이 가까우면 시험 전에 한 번 더 보도록 간격이 줄어듭니다.</p></section>';
     h += '<section class="card"><div class="sec-head"><h3>범위</h3><button class="link" id="allCh" type="button">' + (cfg.ch.length === keys.length ? "전체 해제" : "전체 선택") + '</button></div>';
     keys.forEach(function (c) {
-      const qs = b.qs.filter(function (q) { return String(q.c) === c; }), now = Date.now();
+      const qs = DECK[id].filter(function (q) { return String(q.c) === c; }), now = Date.now();
       const seen = qs.filter(function (q) { return state.srs[q.id]; }).length, due = qs.filter(function (q) { const r = state.srs[q.id]; return r && r.d <= now; }).length;
       h += '<div class="chap" style="grid-template-columns:24px 1fr"><input type="checkbox" id="sc-' + c + '" data-ch="' + c + '"' + (cfg.ch.indexOf(c) >= 0 ? " checked" : "") + '>' +
         '<label for="sc-' + c + '"><span class="nm">' + esc(c + "장 " + b.chapters[c]) + '</span><span class="st">' + seen + ' / ' + qs.length + '장 학습' + (due ? ' · 복습 ' + due : "") + '</span></label></div>';
@@ -965,7 +972,8 @@ window.BANK = [];
   }
 
   function renderCard() {
-    const s = session, id = s.id, b = SUBJ[id], pick = srsPick(id, s.last);
+    // 평가하기 전까지는 보던 카드를 고정한다: 다시 그릴 때 새로 고르면 그사이 복습 시각이 지난 카드로 바뀌고 정답이 열린 채 나온다
+    const s = session, id = s.id, b = SUBJ[id], pick = s.cur ? { q: s.cur, kind: state.srs[s.cur.id] ? "복습" : "새 카드" } : srsPick(id, s.last);
     const info = srsInfo(id);
     const bar = '<div class="bar"><button class="icon-btn" id="quit" type="button" aria-label="그만하기">' + ICON.close + '</button><h1>' + esc(b.name) + ' 암기카드 <span class="sub">복습 ' + info.due + ' · 새 ' + info.fresh + '</span></h1></div>';
     if (!pick) {
@@ -980,12 +988,11 @@ window.BANK = [];
     }
     const q = pick.q, rec = state.srs[q.id];
     s.cur = q;
-    let h = bar + '<article class="card flash"><div class="qhead"><span class="tag type">' + TYPE[q.t] + '</span><span class="tag">' + esc(q.c + "장") + '</span>' +
-      '<span class="tag' + (rec ? "" : " star") + '">' + pick.kind + '</span>' + (q.s ? '<span class="tag star">★ 빈출</span>' : "") + '</div>';
+    let h = bar + '<article class="card flash"><div class="qhead"><span class="tag type">' + (q.k ? "코드 해석" : "개념") + '</span><span class="tag">' + esc(q.c + "장 " + b.chapters[q.c]) + '</span>' +
+      '<span class="tag' + (rec ? "" : " star") + '">' + pick.kind + '</span></div>';
     h += '<div class="qtext">' + fmt(q.q) + '</div>';
     if (q.k) h += '<pre class="code">' + esc(q.k) + '</pre>';
-    if (q.t === "mc") h += '<ol class="wopts">' + q.o.map(function (o, k) { return '<li>' + NUMS[k] + ' ' + fmt(o) + '</li>'; }).join("") + '</ol>';
-    if (s.flipped) h += '<div class="back"><div class="feedback"><span class="v">정답</span><span class="ans">' + fmt(answerText(q)) + '</span>' + (q.e ? '<span class="ex">' + fmt(q.e) + '</span>' : "") + '</div></div>';
+    if (s.flipped) h += '<div class="back"><div class="feedback"><span class="v">정답</span><span class="ans">' + fmt(q.a) + '</span>' + (q.e ? '<span class="ex">' + fmt(q.e) + '</span>' : "") + '</div></div>';
     h += '</article>';
     if (!s.flipped) h += '<p class="hint">답을 먼저 떠올려 보세요 · Space로 정답 보기</p>';
     app.innerHTML = h;
@@ -994,7 +1001,8 @@ window.BANK = [];
       return '<button class="btn srsb ' + g[1] + '" type="button" data-g="' + k + '">' + g[0] + '<small>' + fmtIv(stepMs(id, nextStage(rec, k))) + '</small></button>';
     }).join(""));
     on("quit", function () { go({ name: "srs", id: id }); });
-    on("flip", function () { s.flipped = true; render(); });
+    // 평가 버튼을 두 번 눌렀을 때 다음 카드 정답이 바로 열리지 않게, 직후 0.5초 동안은 정답 보기를 무시한다
+    on("flip", function () { if (Date.now() < (s.lock || 0)) return; s.flipped = true; render(); });
     dockIn.querySelectorAll("[data-g]").forEach(function (el) { el.onclick = function () { srsGrade(+el.dataset.g); }; });
   }
   function srsGrade(g) {
@@ -1002,13 +1010,13 @@ window.BANK = [];
     const stage = nextStage(rec, g);
     state.srs[q.id] = { d: now + stepMs(id, stage), s: stage, f: rec ? rec.f : now, l: (rec ? rec.l : 0) + (g === 0 ? 1 : 0), t: now };
     touch();
-    s.cnt[g]++; s.last = q.id; s.flipped = false;
+    s.cnt[g]++; s.last = q.id; s.flipped = false; s.cur = null; s.lock = Date.now() + 500;
     render();
     window.scrollTo(0, 0);
   }
   document.addEventListener("keydown", function (e) {
     if (view.name !== "card" || !session || !session.cur || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (!session.flipped && (e.key === " " || e.key === "Enter") && document.getElementById("flip")) { e.preventDefault(); session.flipped = true; render(); }
+    if (!session.flipped && (e.key === " " || e.key === "Enter") && document.getElementById("flip") && Date.now() >= (session.lock || 0) && !e.repeat) { e.preventDefault(); session.flipped = true; render(); }
     else if (session.flipped && /^[1-4]$/.test(e.key)) srsGrade(+e.key - 1);
   });
 
