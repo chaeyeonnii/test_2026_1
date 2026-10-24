@@ -1322,7 +1322,104 @@ He      Var(w) = 2 / n_in`,a:"Xavier = 시그모이드·tanh용, He = ReLU용",e
   {c:7,q:"3×3 필터를 반복해 쌓은 약 1.38억 파라미터 모델은?",a:"VGG-16",e:"2014."},
   {c:7,q:"인셉션 모듈과 1×1 합성곱을 쓴 약 700만 파라미터 모델은?",a:"GoogLeNet",e:"2014."},
   {c:7,q:"2015년 잔차 연결로 매우 깊은 네트워크 학습을 가능하게 한 모델은?",a:"ResNet",e:"약 2,560만 파라미터."},
-  {c:7,q:"ResNet의 잔차 연결은 왜 깊은 네트워크 학습을 돕나요?",k:`y = F(x) + x     ∂y/∂x = ∂F/∂x + 1`,a:"미분에 항상 +1이 있어 기울기가 끊기지 않고 앞쪽 층까지 전달된다. 56층이 20층보다 나빴던 최적화 문제를 해결했다",e:"블록은 입력 x 대신 잔차 F(x)=y−x만 학습한다."}
+  {c:7,q:"ResNet의 잔차 연결은 왜 깊은 네트워크 학습을 돕나요?",k:`y = F(x) + x     ∂y/∂x = ∂F/∂x + 1`,a:"미분에 항상 +1이 있어 기울기가 끊기지 않고 앞쪽 층까지 전달된다. 56층이 20층보다 나빴던 최적화 문제를 해결했다",e:"블록은 입력 x 대신 잔차 F(x)=y−x만 학습한다."},
+
+  // ── 보충 카드 (요약 노트 기준) ──
+  // 1장
+  {c:1,q:"전통 프로그램과 데이터 기반 AI의 차이는?",a:"전통 프로그램은 사람이 규칙을 직접 작성하고, 데이터 기반 AI는 입력과 정답의 관계를 알고리즘이 스스로 발견한다",e:"예외가 많을수록 데이터 기반 AI가 필수."},
+  {c:1,q:"‘AI로 ~하자’를 학습 문제(X → y)로 만들려면 반드시 정해야 하는 질문은?",a:"어떤 정보로, 무엇을, 얼마나 미리 예측할 것인가",e:"각각 입력 X, 출력 y, 예측 시점에 대응한다."},
+  {c:1,q:"지도학습의 두 갈래, 회귀와 분류의 차이는?",a:"회귀 = 연속적인 수치 예측(주택 가격·전력 사용량), 분류 = 정해진 범주 예측(스팸/정상, 질병 유/무)",e:""},
+  {c:1,q:"스팸 판별 문제의 설계도(관측 대상·y·학습 유형·ŷ)는?",a:"관측 대상 = 문자 1건 / y = 0(정상)·1(스팸) / 지도학습 중 이진 분류 / ŷ = 스팸일 확률",e:"X 예: 문자 길이·링크 개수·특정 단어 포함. 사후 신고 여부는 누출이라 제외."},
+  {c:1,q:"AI에서 ‘학습’이란?",a:"입력과 정답의 관계를 이용해 모델이 더 적절한 출력을 내도록 내부 매개변수를 조정하는 과정",e:"텍스트·이미지·오디오도 결국 숫자(벡터·픽셀 배열·파형)로 바뀌어 X가 된다."},
+  {c:1,q:"데이터 누출의 예를 들면? (스팸 판별·학업 중단 예측·질병 조기 예측)",a:"스팸: 사후 신고 여부 / 학업 중단: 자퇴 처리 완료 여부 / 질병 조기 예측: 최종 확진 결과",e:"모두 예측 시점에는 알 수 없는 미래 정보."},
+  {c:1,q:"X의 ‘적절성’을 점검할 때 보는 개인정보·편향 질문은?",a:"개인정보: 꼭 필요한 최소한인가·동의를 얻었는가·결합 시 재식별 위험은? / 편향: 집단을 고르게 대표하는가·정답 y에 과거 차별이 섞이지 않았는가",e:""},
+  {c:1,q:"강화학습의 순환 구조는?",a:"상태 → 행동 → 환경 반응 → 보상",e:"목표는 누적 보상의 최대화. 예: 게임 AI, 자율주행."},
+
+  // 2장
+  {c:2,q:"선형회귀 모델식과, 학습이 조정하는 것은?",k:`ŷ = wx + b`,a:"기울기 w와 절편 b라는 다이얼을 미세 조정해 학습한다",e:"일반 표기는 ŷ = f(x; θ). 예: x=공부시간, y=실제 점수."},
+  {c:2,q:"오차와 손실함수의 관계는?",k:`오차 = y − ŷ`,a:"손실함수 L은 오차들을 하나의 숫자로 압축한 값이며, 학습의 목표는 L의 최소화",e:"예: 실제 72점 vs 예측 80점 → 오차 8점."},
+  {c:2,q:"회귀의 대표 평가 지표 4가지와 각각의 특징은?",a:"MAE(절댓값, 원래 단위로 해석 쉬움) · MSE(큰 오차에 기하급수적으로 민감) · RMSE(MSE의 제곱근, 원래 단위로 복원) · R²(평균만 찍었을 때보다 얼마나 잘 맞췄나, 1에 가까울수록 좋음)",e:""},
+  {c:2,q:"테스트 결과를 보고 설정을 반복 수정하면 생기는 문제는?",a:"테스트 데이터를 간접 학습한 셈이 되어 평가의 신뢰성이 무너진다",e:"그래서 테스트는 봉인해 두었다가 마지막에 단 한 번만 쓴다."},
+  {c:2,q:"훈련·검증·테스트 데이터의 비율과 각 역할은?",a:"70% 훈련(매개변수 학습) · 15% 검증(학습 방향 점검·하이퍼파라미터 수정) · 15% 테스트(최종 평가 단 한 번)",e:""},
+  {c:2,q:"혼동행렬의 TP와 TN은 각각 무엇인가?",a:"TP = 양성을 양성으로 맞힘, TN = 음성을 음성으로 맞힘",e:"FP = 오탐(정상을 양성으로), FN = 놓침(양성을 음성으로)."},
+  {c:2,q:"F1 점수는 무엇인가?",a:"정밀도와 재현율의 조화평균",e:"둘 중 하나만 높을 때를 걸러 낸다."},
+  {c:2,q:"다항회귀에서 차수 1, 4, 15는 각각 어떤 상태인가?",a:"1차 = 과소적합, 4차 = 적절한 학습, 15차 = 과적합",e:"15차면 훈련 MSE는 바닥을 찍지만 테스트 MSE는 폭발적으로 치솟는다. 코드: np.polyfit(X_train, y_train, deg=15)"},
+  {c:2,q:"과적합을 발견하려면 무엇을 봐야 하는가?",a:"훈련 성능과 테스트 성능의 격차가 벌어지는 순간",e:"예: 훈련 95%, 테스트 68%."},
+  {c:2,q:"교차 엔트로피에서 정답이 1인데 0.1로 예측하면?",a:"큰 손실이 부과된다 (맞혔는지뿐 아니라 얼마나 확신했는지가 중요)",e:""},
+  {c:2,q:"기출 암기생과 원리 이해자 비유에서 머신러닝이 지향하는 쪽은?",a:"원리 이해자(일반화) — 문제집 90점·수능 95점",e:"기출 암기생은 문제집 100점·수능 50점(과적합)."},
+
+  // 3장
+  {c:3,q:"지도학습과 비지도학습은 무엇을 최적화하나요?",a:"지도학습 = 예측과 정답의 오차, 비지도학습 = 데이터 내부의 거리·분산(구조)",e:"매개변수도 다르다: 회귀계수·가중치 vs 군집 중심·주성분 축."},
+  {c:3,q:"비지도학습이 찾는 4가지 구조는?",a:"고객 세분화 · 문서 탐색 · 이상 탐지 · 시각화(2차원 요약)",e:""},
+  {c:3,q:"K-means를 시작하기 전에 정해야 하는 3가지는?",a:"K(군집 수) · 거리(가까움의 기준) · 초기 중심의 위치",e:""},
+  {c:3,q:"K-means는 언제 종료하나요?",a:"중심이 더 이상 움직이지 않을 때",e:"변화가 있으면 배정 단계로 되돌아간다."},
+  {c:3,q:"K-means 손실이 가장 작은 K가 정답이 아닌 이유는?",a:"손실은 K가 커질수록 무조건 감소하기 때문에, 수학적 최적이 현실의 정답은 아니다. 도메인 해석이 필요하다",e:""},
+  {c:3,q:"차원의 저주에서 1차원·2차원·고차원에 필요한 격자 수는?",a:"1차원 10¹ · 2차원 10² · 고차원 10¹⁰⁰",e:"고차원에서는 공간이 너무 방대해 모두 고립된다."},
+  {c:3,q:"차원이 높아질 때 최근접 거리와 최원 거리는 어떻게 되나요?",a:"차이가 희미해져 거리 개념이 붕괴한다",e:"잡음 특징은 암기생(과적합)을 만든다."},
+  {c:3,q:"표준화(Z-score)의 결과는?",a:"평균 0, 표준편차 1",e:"단위가 다른 특징 중 큰 숫자가 거리를 지배하는 것을 막는다."},
+  {c:3,q:"PCA 식 Σv = λv에서 Σ, v, λ는 각각 무엇인가?",a:"Σ = 공분산 행렬(데이터 구름의 모양), v = 고유벡터(새 축의 방향), λ = 고유값(그 축이 설명하는 분산의 크기)",e:"가장 큰 λ를 가진 v가 제1주성분(PC1)."},
+  {c:3,q:"PCA의 그림자 비유는 무엇을 뜻하나요?",a:"가장 넓게 퍼지는 각도(분산 최대)로 투영해야 정보 손실이 가장 적다",e:""},
+  {c:3,q:"설명분산비 PC1 68% + PC2 22% 라면 두 축으로 보존되는 정보는?",a:"약 90%",e:"PC3이 10%를 설명."},
+  {c:3,q:"다음 실습의 순서(스케일러 → 군집 → 시각화)는?",a:"StandardScaler() → KMeans() → PCA()",e:""},
+
+  // 4장
+  {c:4,q:"생물 뉴런과 인공 뉴런의 대응 관계는?",a:"수상돌기 = 입력 x, 시냅스 = 가중치 w, 세포체 = 가중합 Σ, 축삭둔덕 = 활성화 함수 f",e:"가중치는 정보의 중요도를 조절하는 ‘볼륨 조절기’."},
+  {c:4,q:"퍼셉트론의 우산 예시에서 x₁과 x₂, 출력은?",a:"x₁ = 일기예보 비 확률(0.8), x₂ = 현재 구름 양(0.5), 출력 = 챙긴다(1)/안 챙긴다(0)",e:""},
+  {c:4,q:"은닉층의 역할을 ‘위원회’에 비유하면?",a:"하나의 결정이 아니라 여러 뉴런의 합의 — 데이터를 풀기 쉬운 새로운 표현으로 변환한다",e:""},
+  {c:4,q:"활성화 함수의 역할은?",a:"평탄한 공간을 구부려 복잡한 결정 경계를 만드는 비선형 변환 장치",e:"은닉층 + 활성화 함수 → 복잡한 패턴 표현."},
+  {c:4,q:"ReLU는 음수와 양수 입력을 어떻게 처리하나요?",a:"음수는 차단(0), 양수는 그대로 통과",e:"빠르고 깊은 망에서도 신호가 전달된다."},
+  {c:4,q:"시그모이드의 장점과 한계는?",a:"확률(0~1) 표현에 좋지만 층이 깊으면 기울기 소실이 생긴다",e:""},
+  {c:4,q:"MLP를 구성하는 층의 순서는?",a:"입력층(감각) → 은닉층(가중합+활성화 반복) → 출력층(예측값)",e:""},
+  {c:4,q:"여러 뉴런을 행렬 W 하나로 묶는 이유는?",a:"한 번에 연산하기 위해서 — 행렬 연산에 특화된 GPU가 AI의 핵심이 된다",e:"코딩 전에 shape부터 그려 보자."},
+  {c:4,q:"순전파만으로는 학습이 일어나지 않는 이유는?",a:"순전파는 현재 실력으로 ‘찍어 보는’ 계산일 뿐이고, 오답으로 가중치를 고치는 것은 역전파이기 때문",e:""},
+
+  // 5장
+  {c:5,q:"회귀와 분류에서 쓰는 손실 함수는 각각 무엇인가?",a:"회귀 = MSE, 분류 = 교차 엔트로피",e:"교차 엔트로피는 정답 범주에 준 확률이 낮을수록 큰 벌점."},
+  {c:5,q:"기울기의 정의(출력 변화 ÷ 입력 변화)를 수식으로 쓰면?",k:`f′(x) ≈ [f(x+Δx) − f(x)] / Δx`,a:"입력을 조금 바꿨을 때 출력이 얼마나 변하는지 (작은 변화에 대한 반응)",e:""},
+  {c:5,q:"경사하강법에서 이동 방향은?",a:"기울기의 반대 방향",e:"산의 높이 = 손실, 내려가는 방향 = 기울기의 반대."},
+  {c:5,q:"u=3x, L=u², x=2일 때 L=9x²로 검산하면?",a:"dL/dx = 18x = 36 — 연쇄 법칙의 12×3 = 36과 일치",e:""},
+  {c:5,q:"역전파가 답하려는 핵심 질문은?",a:"첫 층의 가중치 w를 아주 조금 바꾸면 최종 손실 L은 얼마나 변할까?",e:""},
+  {c:5,q:"한 은닉 뉴런의 순전파 흐름은?",k:`z = wx + b → h = σ(z) → ŷ = vh → L(ŷ, y)`,a:"가중합 z → 활성화 h → 출력 ŷ → 손실 L",e:"역전파는 이 반대 방향으로 기울기를 전달한다."},
+  {c:5,q:"학습에 대한 세 가지 질문은? (5장~6장)",a:"① 어떻게 계산하나(연쇄 법칙) ② 왜 깊은 층에서 기울기가 작아지나 ③ 어떻게 안정화하나(활성화 함수·초기화·최적화·규제화)",e:""},
+
+  // 6장
+  {c:6,q:"시그모이드의 미분식과 최댓값은?",k:`σ′(z) = σ(z)·[1 − σ(z)]`,a:"최댓값 0.25 (z=0일 때 0.5×0.5)",e:"출력이 0/1에 가까운 포화 구간에서는 기울기가 거의 0."},
+  {c:6,q:"시그모이드를 n층 쌓았을 때 기울기는 어떻게 줄어드나요? (n=3, 5, 10)",k:`0.25ⁿ`,a:"3층 0.016, 5층 0.001, 10층 약 10⁻⁶(100만분의 1)",e:"앞쪽 층은 수정량 η·g가 너무 작아 거의 배우지 못한다."},
+  {c:6,q:"ReLU가 기울기 소실에 강한 이유는?",a:"양수 구간의 기울기가 1이라 그대로 통과하고 계산도 빠르다 (시그모이드 최대 0.25)",e:""},
+  {c:6,q:"입력이 계속 음수라 기울기가 0이 되는 ReLU의 문제와 보완책은?",a:"죽은 ReLU — Leaky ReLU로 보완",e:""},
+  {c:6,q:"가중치 초기화의 목표는?",a:"층을 지나도 신호의 분산이 유지되게 하는 것 (너무 작으면 사라지고, 너무 크면 폭발)",e:""},
+  {c:6,q:"SGD의 업데이트 식과 약점은?",k:`w ← w − η·g`,a:"미니배치로 방향이 흔들리고, 좁고 긴 골짜기(벽 사이 왕복)·평지·안장점에서 어려움을 겪는다",e:""},
+  {c:6,q:"모멘텀의 식과 효과는?",k:`v = β·v_prev + g   (β = 0.9)`,a:"같은 방향이면 가속(g=+1 반복 → 1.00, 1.90, 2.71, 3.44), 번갈아 바뀌면 상쇄",e:"굴러가는 공의 관성."},
+  {c:6,q:"Adagrad의 s 갱신식과 비유는?",k:`s = s_prev + g²`,a:"제곱 기울기를 계속 누적해서 보폭이 0에 수렴하고 학습이 멈출 수 있다 — ‘전부 기억하는 일기장’",e:""},
+  {c:6,q:"RMSprop의 s 갱신식과 비유는?",k:`s = ρ·s_prev + (1−ρ)·g²   (ρ ≈ 0.9)`,a:"이동평균이라 보폭이 유지된다 — ‘최근 메모장’",e:""},
+  {c:6,q:"Adam은 무엇과 무엇을 결합했고 기본값은?",a:"모멘텀(방향) + RMSprop(보폭). η=0.001, β₁=0.9, β₂=0.999",e:"m̂·v̂는 초반 보정."},
+  {c:6,q:"L1과 L2 규제식은?",k:`L1: λ·Σ|w|     L2: λ·Σw²`,a:"L1은 덜 중요한 가중치를 정확히 0으로(특징 제거), L2는 모든 가중치를 고르게 작게(0은 아님)",e:""},
+  {c:6,q:"드롭아웃이 앙상블 효과를 내는 이유는?",a:"훈련 중 무작위로 뉴런을 꺼서(예: p=0.5) 매번 다른 작은 신경망을 학습시키는 셈이기 때문",e:"테스트 땐 모든 뉴런을 사용."},
+  {c:6,q:"검증 손실 0.62, 0.48, 0.41, 0.39, 0.40, 0.42, 0.41 (patience=3)이면 복원하는 에폭은?",a:"에폭 4 (최저 손실 0.39). 에폭 7이 아님",e:"5·6·7에폭에서 3회 개선이 없어 중단."},
+  {c:6,q:"학습 로그에서 loss가 들쭉날쭉하고 느리게 줄면 의심할 것과 처방은?",a:"보폭·방향 문제 → 모멘텀·Adam, 학습률 조정",e:"앞쪽 층 기울기≈0 → ReLU+He 초기화."},
+  {c:6,q:"깊은 신경망 학습의 3가지 파트와 해결책은?",a:"기울기 소실 → ReLU·초기화(Xavier/He) / 최적화 → 모멘텀·RMSprop·Adam / 규제화 → L1·L2·드롭아웃·조기 종료",e:""},
+
+  // 7장
+  {c:7,q:"컬러 이미지와 흑백 이미지의 배열 모양은?",a:"흑백 H×W (예: Fashion-MNIST 28×28), 컬러 H×W×3 (RGB)",e:"Keras는 (H, W, C), 배치를 포함하면 PyTorch는 (B, C, H, W)."},
+  {c:7,q:"28×28 이미지를 Flatten(784×1)하면 어떤 정보가 사라지나요?",a:"이웃 관계 — 바로 아래 픽셀이 28칸 떨어지게 되어 몇 픽셀만 이동해도 전혀 다른 입력이 된다",e:""},
+  {c:7,q:"CNN의 수용 영역(receptive field)이란?",a:"각 뉴런이 보는 입력의 작은 영역 (지역 연결)",e:"Hubel·Wiesel의 고양이 시각 피질 연구에서 착안."},
+  {c:7,q:"합성곱 연산의 수식은?",k:`y[i,j] = Σₘ Σₙ x[i+m, j+n]·w[m,n] + b`,a:"필터를 겹쳐 같은 칸끼리 곱해 모두 더하고 편향을 더한 뒤, 미끄러뜨리며 반복해 특징 맵을 만든다",e:"라이브러리의 합성곱은 수학적으로 교차상관이지만 결과 차이는 없다."},
+  {c:7,q:"수직 엣지를 찾는 3×3 필터 모양은?",a:"각 행이 [1 0 −1] (왼쪽 − 오른쪽 밝기 차)",e:"수평 엣지는 [1 1 1; 0 0 0; −1 −1 −1]."},
+  {c:7,q:"행 [10 10 10 200 200 200]에 엣지 필터를 적용하면?",a:"[0, −570, −570, 0] — 경계에서만 반응한다",e:""},
+  {c:7,q:"합성곱 필터의 값은 누가 정하나요?",a:"사람이 정하지 않고 역전파로 학습한다",e:""},
+  {c:7,q:"스트라이드를 2로 하면 출력 크기는? (N=7, F=3, P=0)",k:`O = ⌊(N + 2P − F) / S⌋ + 1`,a:"S=1이면 5, S=2이면 3 — 출력이 약 절반(다운샘플링)",e:""},
+  {c:7,q:"패딩(P)의 역할은?",a:"테두리에 0을 둘러 크기를 유지하고 가장자리를 활용한다",e:"F=3, S=1, P=1이면 입력 크기 유지(same)."},
+  {c:7,q:"풀링층의 특징 4가지는?",a:"학습 파라미터 0개 · 크기 절반 · 계산량 감소 · 다음 층의 수용 영역 증가",e:"최대 풀링(가장 강한 반응)을 주로 사용."},
+  {c:7,q:"4×4 입력에 2×2 창, 스트라이드 2를 적용하면 출력 크기는?",a:"2×2",e:"최대 풀링 예: [6 5; 3 7], 평균 풀링 예: [3.5 2; 1.5 3.5]."},
+  {c:7,q:"CNN이 층별로 학습하는 특징의 순서는?",a:"앞쪽 = 엣지·색 대비 → 중간 = 질감·부분 모양 → 깊은 층 = 물체 수준 패턴",e:""},
+  {c:7,q:"32×32×3 입력에 5×5 필터 10개(S=1, P=2)를 적용하면 출력 크기와 파라미터 수는?",a:"출력 32×32×10, 파라미터 (5·5·3+1)·10 = 760",e:""},
+  {c:7,q:"입력 1채널에 3×3 필터 32개를 쓰는 합성곱층의 파라미터 수는?",a:"(3·3·1+1)·32 = 320",e:"이어지는 32→64 합성곱은 18,496."},
+  {c:7,q:"Keras 첫 CNN(Conv32 → Pool → Conv64 → Pool → Flatten → Dense128 → Dense10)의 총 파라미터와 가장 큰 부분은?",a:"421,642개이며 완전연결층이 약 95%를 차지한다",e:"ReLU·풀링은 파라미터 없음. Flatten 후 3136 → 128은 401,536."},
+  {c:7,q:"실습에 쓴 Fashion-MNIST의 구성은?",a:"28×28 흑백 의류 10종, 훈련 6만 / 테스트 1만",e:"SparseCategoricalCrossentropy(from_logits=True), Adam(1e-3), 배치 64, 5에폭."},
+  {c:7,q:"AlexNet과 ResNet의 ILSVRC top-5 오류율은?",a:"AlexNet 15.3%, ResNet 3.57% (152층)",e:""},
+  {c:7,q:"GoogLeNet이 적은 파라미터로 깊게 쌓을 수 있었던 핵심은?",a:"인셉션 모듈과 1×1 합성곱",e:"약 700만 파라미터."},
+  {c:7,q:"일반 CNN을 깊게 쌓으면 훈련 오차까지 커지는 현상(56층 > 20층)의 원인은?",a:"과적합이 아니라 최적화 문제",e:"ResNet의 잔차 연결이 해결."},
+  {c:7,q:"합성곱과 풀링이 주는 동변성·불변성의 차이는?",a:"합성곱은 이동하면 특징 맵도 같이 이동(동변성), 풀링은 작은 이동에는 출력이 거의 안 변함(불변성)",e:"불변성은 국소적·근사적이라 창 경계를 넘으면 달라진다."}
 ];
 
 </script>
@@ -3417,7 +3514,8 @@ else:
     return i.due + i.fresh ? "복습 " + i.due + "장 · 새 " + i.fresh + "장" : "오늘 분량 완료";
   }
   // 다음에 보여 줄 카드: 복습 시각이 지난 카드 → 새 카드 → 곧 돌아올 카드 순
-  function srsPick(id, lastId) {
+  // free: 오늘 분량을 마친 뒤 "계속 공부하기" — 하루 새 카드 제한을 넘겨 새 카드를 보고, 그다음엔 가장 오래 안 본 카드부터 돌려 본다
+  function srsPick(id, lastId, free) {
     const info = srsInfo(id), now = Date.now();
     const pickFrom = function (list) { return list.find(function (q) { return q.id !== lastId; }) || list[0] || null; };
     const dueList = info.cards.filter(function (q) { const r = state.srs[q.id]; return r && r.d <= now; })
@@ -3426,7 +3524,12 @@ else:
     if (info.fresh > 0) return { q: pickFrom(newOrder(info.cards).slice(0, 5)), kind: "새 카드" };
     const soon = info.cards.filter(function (q) { const r = state.srs[q.id]; return r && r.d <= now + AHEAD_MS; })
       .sort(function (a, b) { return state.srs[a.id].d - state.srs[b.id].d; });
-    return soon.length ? { q: pickFrom(soon), kind: "복습" } : null;
+    if (soon.length) return { q: pickFrom(soon), kind: "복습" };
+    if (!free) return null;
+    if (info.freshAll > 0) return { q: pickFrom(newOrder(info.cards).slice(0, 5)), kind: "새 카드" };
+    const seen = info.cards.filter(function (q) { return state.srs[q.id]; })
+      .sort(function (a, b) { return (state.srs[a.id].t || 0) - (state.srs[b.id].t || 0); });
+    return seen.length ? { q: pickFrom(seen), kind: "자유 복습" } : null;
   }
 
   function renderSrs() {
@@ -3450,7 +3553,8 @@ else:
       [10, 20, 30, 50, 0].map(function (n) { return '<button class="chip" type="button" data-n="' + n + '" aria-pressed="' + (cfg.n === n) + '">' + (n || "제한 없음") + '</button>'; }).join("") + '</div></div></section></div>';
     app.innerHTML = h;
     const go1 = info.due + info.fresh;
-    setDock('<button class="btn" id="go" type="button"' + (go1 ? "" : " disabled") + '>' + (go1 ? "카드 " + go1 + "장 시작" : "지금 볼 카드 없음") + '</button>');
+    // 오늘 분량이 없어도 고른 범위에 카드가 있으면 자유 복습으로 계속 공부할 수 있다
+    setDock('<button class="btn" id="go" type="button"' + (go1 || total ? "" : " disabled") + '>' + (go1 ? "카드 " + go1 + "장 시작" : (total ? "계속 공부하기 (자유 복습)" : "범위를 선택하세요")) + '</button>');
     on("back", function () { go({ name: "home" }); });
     const save = function () { state.sc[id] = cfg; touch(); render(); };
     on("allCh", function () { cfg.ch = cfg.ch.length === keys.length ? [] : keys.slice(); save(); });
@@ -3458,26 +3562,29 @@ else:
       el.onchange = function () { cfg.ch = el.checked ? cfg.ch.concat([el.dataset.ch]) : cfg.ch.filter(function (x) { return x !== el.dataset.ch; }); save(); };
     });
     app.querySelectorAll("[data-n]").forEach(function (el) { el.onclick = function () { cfg.n = +el.dataset.n; save(); }; });
-    on("go", function () { session = { srs: true, id: id, last: null, flipped: false, done: 0, cnt: [0, 0, 0, 0] }; go({ name: "card" }); });
+    on("go", function () { session = { srs: true, id: id, last: null, flipped: false, done: 0, cnt: [0, 0, 0, 0], free: go1 === 0 }; go({ name: "card" }); });
   }
 
   function renderCard() {
     // 평가하기 전까지는 보던 카드를 고정한다: 다시 그릴 때 새로 고르면 그사이 복습 시각이 지난 카드로 바뀌고 정답이 열린 채 나온다
-    const s = session, id = s.id, b = SUBJ[id], pick = s.cur ? { q: s.cur, kind: state.srs[s.cur.id] ? "복습" : "새 카드" } : srsPick(id, s.last);
+    const s = session, id = s.id, b = SUBJ[id], pick = s.cur ? { q: s.cur, kind: s.kind } : srsPick(id, s.last, s.free);
     const info = srsInfo(id);
     const bar = '<div class="bar"><button class="icon-btn" id="quit" type="button" aria-label="그만하기">' + ICON.close + '</button><h1>' + esc(b.name) + ' 암기카드 <span class="sub">복습 ' + info.due + ' · 새 ' + info.fresh + '</span></h1></div>';
     if (!pick) {
       s.cur = null;
       const n = s.cnt[0] + s.cnt[1] + s.cnt[2] + s.cnt[3];
       app.innerHTML = bar + '<div class="card empty"><b>오늘 분량 끝!</b><p>' + n + '장을 봤어요 (다시 ' + s.cnt[0] + ' · 어려움 ' + s.cnt[1] + ' · 좋음 ' + s.cnt[2] + ' · 쉬움 ' + s.cnt[3] + ')' +
-        (info.next < Infinity ? '<br>다음 복습은 ' + fmtIv(info.next - Date.now()) + ' 뒤예요. 시간이 되면 다시 열어 주세요.' : "") + '</p></div>';
-      setDock('<button class="btn" id="back" type="button">돌아가기</button>');
+        (info.next < Infinity ? '<br>다음 복습은 ' + fmtIv(info.next - Date.now()) + ' 뒤예요. 더 공부하려면 아래 버튼으로 계속 이어갈 수 있어요.' : "") + '</p></div>';
+      setDock((s.free || !info.cards.length ? "" : '<button class="btn ok" id="more" type="button">계속 공부하기</button>') + '<button class="btn light" id="back" type="button">돌아가기</button>');
       on("quit", function () { go({ name: "srs", id: id }); });
       on("back", function () { go({ name: "srs", id: id }); });
+      on("more", function () { s.free = true; s.flipped = false; render(); });
       return;
     }
     const q = pick.q, rec = state.srs[q.id];
-    s.cur = q;
+    s.cur = q; s.kind = pick.kind;
+    // 아직 복습 시각이 안 된 카드를 앞당겨 볼 때는 잘 기억해도 간격을 늘리지 않는다 (미리 외운 걸로 처리되는 것 방지)
+    const early = s.early = pick.kind === "자유 복습";
     let h = bar + '<article class="card flash"><div class="qhead"><span class="tag type">' + (q.k ? "코드 해석" : "개념") + '</span><span class="tag">' + esc(q.c + "장 " + b.chapters[q.c]) + '</span>' +
       '<span class="tag' + (rec ? "" : " star") + '">' + pick.kind + '</span></div>';
     h += '<div class="qtext">' + fmt(q.q) + '</div>';
@@ -3488,7 +3595,7 @@ else:
     app.innerHTML = h;
     if (!s.flipped) setDock('<button class="btn" id="flip" type="button">정답 보기</button>');
     else setDock(GRADES.map(function (g, k) {
-      return '<button class="btn srsb ' + g[1] + '" type="button" data-g="' + k + '">' + g[0] + '<small>' + fmtIv(stepMs(id, nextStage(rec, k))) + '</small></button>';
+      return '<button class="btn srsb ' + g[1] + '" type="button" data-g="' + k + '">' + g[0] + '<small>' + (early && k > 0 ? "유지" : fmtIv(stepMs(id, nextStage(rec, k)))) + '</small></button>';
     }).join(""));
     on("quit", function () { go({ name: "srs", id: id }); });
     // 평가 버튼을 두 번 눌렀을 때 다음 카드 정답이 바로 열리지 않게, 직후 0.5초 동안은 정답 보기를 무시한다
@@ -3498,7 +3605,8 @@ else:
   function srsGrade(g) {
     const s = session, q = s.cur, id = s.id, now = Date.now(), rec = state.srs[q.id];
     const stage = nextStage(rec, g);
-    state.srs[q.id] = { d: now + stepMs(id, stage), s: stage, f: rec ? rec.f : now, l: (rec ? rec.l : 0) + (g === 0 ? 1 : 0), t: now };
+    if (s.early && g > 0) state.srs[q.id] = Object.assign({}, rec, { t: now }); // 자유 복습: 기억났으면 일정은 그대로 두고 본 시각만 기록
+    else state.srs[q.id] = { d: now + stepMs(id, stage), s: stage, f: rec ? rec.f : now, l: (rec ? rec.l : 0) + (g === 0 ? 1 : 0), t: now };
     touch();
     s.cnt[g]++; s.last = q.id; s.flipped = false; s.cur = null; s.lock = Date.now() + 500;
     render();
