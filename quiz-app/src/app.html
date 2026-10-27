@@ -963,7 +963,8 @@ window.BANK = [];
         '<label for="sc-' + c + '"><span class="nm">' + esc(c + "장 " + b.chapters[c]) + '</span><span class="st">' + seen + ' / ' + qs.length + '장 학습' + (due ? ' · 복습 ' + due : "") + '</span></label></div>';
     });
     h += '</section><section class="card"><div class="row"><span class="label">하루 새 카드</span><div class="chips">' +
-      [10, 20, 30, 50, 0].map(function (n) { return '<button class="chip" type="button" data-n="' + n + '" aria-pressed="' + (cfg.n === n) + '">' + (n || "제한 없음") + '</button>'; }).join("") + '</div></div></section></div>';
+      [10, 20, 30, 50, 0].map(function (n) { return '<button class="chip" type="button" data-n="' + n + '" aria-pressed="' + (cfg.n === n) + '">' + (n || "제한 없음") + '</button>'; }).join("") + '</div></div></section>' +
+      '<div class="stack"><button class="link" id="srsReset" type="button" style="align-self:center">이 과목 공부 기록 초기화</button></div></div>';
     app.innerHTML = h;
     const go1 = info.due + info.fresh;
     // 오늘 분량이 없어도 고른 범위에 카드가 있으면 자유 복습으로 계속 공부할 수 있다
@@ -975,6 +976,13 @@ window.BANK = [];
       el.onchange = function () { cfg.ch = el.checked ? cfg.ch.concat([el.dataset.ch]) : cfg.ch.filter(function (x) { return x !== el.dataset.ch; }); save(); };
     });
     app.querySelectorAll("[data-n]").forEach(function (el) { el.onclick = function () { cfg.n = +el.dataset.n; save(); }; });
+    // 실수로 누르지 않도록 한 번 더 눌러야 초기화한다 (범위 선택과 무관하게 이 과목 카드 전체)
+    const rb = document.getElementById("srsReset");
+    rb.onclick = function () {
+      if (rb.dataset.armed) { DECK[id].forEach(function (q) { delete state.srs[q.id]; }); touch(); toast("공부 기록을 초기화했어요"); render(); return; }
+      rb.dataset.armed = "1"; rb.textContent = "한 번 더 누르면 초기화돼요"; rb.style.color = "var(--ng)";
+      setTimeout(function () { if (rb.isConnected) { delete rb.dataset.armed; rb.textContent = "이 과목 공부 기록 초기화"; rb.style.color = ""; } }, 3000);
+    };
     on("go", function () { session = { srs: true, id: id, last: null, flipped: false, done: 0, cnt: [0, 0, 0, 0], free: go1 === 0 }; go({ name: "card" }); });
   }
 
