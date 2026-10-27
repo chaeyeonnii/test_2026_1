@@ -899,7 +899,7 @@ window.BANK = [];
   function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
   function srsCfg(id) {
     const b = SUBJ[id], c = state.sc[id] || {};
-    return { ch: Array.isArray(c.ch) ? c.ch.filter(function (x) { return b.chapters[x]; }) : deckChapters(id), n: typeof c.n === "number" ? c.n : 30 };
+    return { ch: Array.isArray(c.ch) ? c.ch.filter(function (x) { return b.chapters[x]; }) : deckChapters(id), n: typeof c.n === "number" ? c.n : 30, sh: !!c.sh };
   }
   function srsCards(id, cfg) { return DECK[id].filter(function (q) { return cfg.ch.indexOf(String(q.c)) >= 0; }); }
   function newOrder(cards) {
@@ -930,16 +930,22 @@ window.BANK = [];
   // free: 오늘 분량을 마친 뒤 "계속 공부하기" — 하루 새 카드 제한을 넘겨 새 카드를 보고, 그다음엔 가장 오래 안 본 카드부터 돌려 본다
   function srsPick(id, lastId, free) {
     const info = srsInfo(id), now = Date.now();
-    const pickFrom = function (list) { return list.find(function (q) { return q.id !== lastId; }) || list[0] || null; };
+    // 섞기: 후보 전체에서 무작위로 고른다 (방금 본 카드는 제외)
+    const shuffled = info.cfg.sh;
+    const pickFrom = function (list) {
+      if (shuffled) { const rest = list.filter(function (q) { return q.id !== lastId; }); const pool = rest.length ? rest : list; return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null; }
+      return list.find(function (q) { return q.id !== lastId; }) || list[0] || null;
+    };
+    const newPool = function () { const all = newOrder(info.cards); return shuffled ? all : all.slice(0, 5); };
     const dueList = info.cards.filter(function (q) { const r = state.srs[q.id]; return r && r.d <= now; })
       .sort(function (a, b) { return state.srs[a.id].d - state.srs[b.id].d; });
     if (dueList.length) return { q: pickFrom(dueList), kind: "복습" };
-    if (info.fresh > 0) return { q: pickFrom(newOrder(info.cards).slice(0, 5)), kind: "새 카드" };
+    if (info.fresh > 0) return { q: pickFrom(newPool()), kind: "새 카드" };
     const soon = info.cards.filter(function (q) { const r = state.srs[q.id]; return r && r.d <= now + AHEAD_MS; })
       .sort(function (a, b) { return state.srs[a.id].d - state.srs[b.id].d; });
     if (soon.length) return { q: pickFrom(soon), kind: "복습" };
     if (!free) return null;
-    if (info.freshAll > 0) return { q: pickFrom(newOrder(info.cards).slice(0, 5)), kind: "새 카드" };
+    if (info.freshAll > 0) return { q: pickFrom(newPool()), kind: "새 카드" };
     const seen = info.cards.filter(function (q) { return state.srs[q.id]; })
       .sort(function (a, b) { return (state.srs[a.id].t || 0) - (state.srs[b.id].t || 0); });
     return seen.length ? { q: pickFrom(seen), kind: "자유 복습" } : null;
@@ -963,7 +969,9 @@ window.BANK = [];
         '<label for="sc-' + c + '"><span class="nm">' + esc(c + "장 " + b.chapters[c]) + '</span><span class="st">' + seen + ' / ' + qs.length + '장 학습' + (due ? ' · 복습 ' + due : "") + '</span></label></div>';
     });
     h += '</section><section class="card"><div class="row"><span class="label">하루 새 카드</span><div class="chips">' +
-      [10, 20, 30, 50, 0].map(function (n) { return '<button class="chip" type="button" data-n="' + n + '" aria-pressed="' + (cfg.n === n) + '">' + (n || "제한 없음") + '</button>'; }).join("") + '</div></div></section>' +
+      [10, 20, 30, 50, 0].map(function (n) { return '<button class="chip" type="button" data-n="' + n + '" aria-pressed="' + (cfg.n === n) + '">' + (n || "제한 없음") + '</button>'; }).join("") + '</div></div>' +
+      '<div class="row" style="margin-top:12px"><span class="label">카드 순서</span><div class="chips">' +
+      [[false, "순서대로"], [true, "섞기"]].map(function (o) { return '<button class="chip" type="button" data-sh="' + (o[0] ? 1 : 0) + '" aria-pressed="' + (cfg.sh === o[0]) + '">' + o[1] + '</button>'; }).join("") + '</div></div></section>' +
       '<div class="stack"><button class="link" id="srsReset" type="button" style="align-self:center">이 과목 공부 기록 초기화</button></div></div>';
     app.innerHTML = h;
     const go1 = info.due + info.fresh;
@@ -976,6 +984,7 @@ window.BANK = [];
       el.onchange = function () { cfg.ch = el.checked ? cfg.ch.concat([el.dataset.ch]) : cfg.ch.filter(function (x) { return x !== el.dataset.ch; }); save(); };
     });
     app.querySelectorAll("[data-n]").forEach(function (el) { el.onclick = function () { cfg.n = +el.dataset.n; save(); }; });
+    app.querySelectorAll("[data-sh]").forEach(function (el) { el.onclick = function () { cfg.sh = el.dataset.sh === "1"; save(); }; });
     // 실수로 누르지 않도록 한 번 더 눌러야 초기화한다 (범위 선택과 무관하게 이 과목 카드 전체)
     const rb = document.getElementById("srsReset");
     rb.onclick = function () {
